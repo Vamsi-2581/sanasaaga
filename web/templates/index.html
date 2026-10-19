@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="fi" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Sanadruidi - Suomenkielinen Wordle-sanapeli. Arvaa 4–8-kirjaimisia suomen kielen substantiiveja, adjektiiveja ja verbejä!">
+  <title>Sanadruidi - Suomalainen Wordle</title>
+  
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="game-header">
+      <div class="header-side left">
+        <button id="helpBtn" class="icon-btn" aria-label="Kuinka pelataan" title="Kuinka pelataan">
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" fill="none" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="header-center">
+        <h1 class="logo">
+          <span class="logo-leaf">🌿</span>
+          SANADRUIDI
+        </h1>
+      </div>
+
+      <div class="header-side right">
+        <button id="statsBtn" class="icon-btn" aria-label="Tilastot" title="Tilastot">
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" fill="none" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+        </button>
+        <button id="settingsBtn" class="icon-btn" aria-label="Asetukset" title="Asetukset">
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" fill="none" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Controls Bar -->
+    <section class="controls-bar" aria-label="Pelin asetukset ja valinnat">
+      <div class="control-row">
+        <!-- Mode Tabs -->
+        <div class="segmented-control mode-control" role="tablist">
+          <button id="modeDaily" class="segment-btn active" role="tab" aria-selected="true" data-mode="daily">
+            📅 Päivän sana
+          </button>
+          <button id="modeRandom" class="segment-btn" role="tab" aria-selected="false" data-mode="random">
+            🎲 Vapaa peli
+          </button>
+        </div>
+
+        <button id="newGameBtn" class="action-btn small-btn" title="Aloita uusi kierros">
+          Uusi sana ↻
+        </button>
+      </div>
+
+      <div class="control-row secondary-controls">
+        <!-- Word Length Selector -->
+        <div class="length-selector" role="group" aria-label="Sanan pituus">
+          <span class="control-label">Pituus:</span>
+          <div class="btn-group">
+            <button class="len-btn" data-len="4">4</button>
+            <button class="len-btn active" data-len="5">5</button>
+            <button class="len-btn" data-len="6">6</button>
+            <button class="len-btn" data-len="7">7</button>
+            <button class="len-btn" data-len="8">8</button>
+          </div>
+        </div>
+
+        <!-- Category Filter -->
+        <div class="category-selector" role="group" aria-label="Sanaluokka">
+          <span class="control-label">Luokka:</span>
+          <select id="categorySelect" class="styled-select" aria-label="Valitse sanaluokka">
+            <option value="all">Kaikki</option>
+            <option value="substantiivi">Substantiivit</option>
+            <option value="adjektiivi">Adjektiivit</option>
+            <option value="verbi">Verbit</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Hint Badge (if enabled) -->
+      <div id="hintBadgeContainer" class="hint-container hidden">
+        <span class="hint-badge" id="hintBadge">Sanaluokka: <strong>Substantiivi</strong></span>
+      </div>
+    </section>
+
+    <!-- Game Board -->
+    <main class="board-container">
+      <div id="board" class="board" role="grid" aria-label="Wordle-pelilauta"></div>
+    </main>
+
+    <!-- Virtual Keyboard -->
+    <footer class="keyboard-container" aria-label="Virtuaalinen näppäimistö">
+      <div id="keyboard" class="keyboard"></div>
+    </footer>
+  </div>
+
+  <!-- Toast Notification Area -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- Dialog: Miten pelataan -->
+  <dialog id="helpDialog" class="modal-dialog" closedby="any" aria-labelledby="helpDialogTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="helpDialogTitle">Kuinka pelataan</h2>
+        <form method="dialog"><button class="close-x" aria-label="Sulje">&times;</button></form>
+      </div>
+      <div class="modal-body">
+        <p>Arvaa kätketty suomen kielen sana <strong>6 yrityksellä</strong>.</p>
+        <p>Jokaisen arvauksen on oltava oikea suomen kielen perusmuotoinen sana valitulla pituudella (<strong>4–8 kirjainta</strong>: substantiivi, adjektiivi tai verbi).</p>
+        <p>Jokaisen arvauksen jälkeen ruutujen värit kertovat, kuinka lähellä olit:</p>
+
+        <div class="example-box">
+          <div class="example-row">
+            <div class="tile correct">M</div>
+            <div class="tile">E</div>
+            <div class="tile">T</div>
+            <div class="tile">S</div>
+            <div class="tile">Ä</div>
+          </div>
+          <p><strong>Vihreä:</strong> Kirjain <strong>M</strong> on sanassa ja täsmälleen oikealla paikalla.</p>
+
+          <div class="example-row">
+            <div class="tile">K</div>
+            <div class="tile present">A</div>
+            <div class="tile">U</div>
+            <div class="tile">P</div>
+            <div class="tile">A</div>
+          </div>
+          <p><strong>Keltainen:</strong> Kirjain <strong>A</strong> on sanassa, mutta väärällä paikalla.</p>
+
+          <div class="example-row">
+            <div class="tile">T</div>
+            <div class="tile">A</div>
+            <div class="tile">L</div>
+            <div class="tile absent">O</div>
+            <div class="tile">T</div>
+          </div>
+          <p><strong>Harmaa:</strong> Kirjain <strong>O</strong> ei esiinny kätketyssä sanassa lainkaan.</p>
+        </div>
+
+        <div class="kotus-note">
+          <strong>🌿 Sanasto:</strong> Sanaston pohjana on Kotimaisten kielten keskuksen (Kotus) nykysuomen sanalista ja Voikon Joukahainen-tietokanta.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <form method="dialog">
+          <button class="action-btn primary-btn">Selvä, aloitetaan!</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Dialog: Tilastot -->
+  <dialog id="statsDialog" class="modal-dialog" closedby="any" aria-labelledby="statsDialogTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="statsDialogTitle">Tilastot</h2>
+        <form method="dialog"><button class="close-x" aria-label="Sulje">&times;</button></form>
+      </div>
+      <div class="modal-body">
+        <div class="stats-overview">
+          <div class="stat-item">
+            <span class="stat-val" id="statPlayed">0</span>
+            <span class="stat-lbl">Pelattu</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-val" id="statWinPct">0%</span>
+            <span class="stat-lbl">Voitot</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-val" id="statStreak">0</span>
+            <span class="stat-lbl">Putki</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-val" id="statMaxStreak">0</span>
+            <span class="stat-lbl">Pisin putki</span>
+          </div>
+        </div>
+
+        <h3 class="stats-subtitle">Arvausjakauma</h3>
+        <div class="guess-distribution" id="guessDistribution">
+          <!-- Populated by JS -->
+        </div>
+
+        <div id="statsDailyCountdown" class="daily-countdown hidden">
+          <span>Seuraava päivän sana:</span>
+          <strong id="countdownTimer">--:--:--</strong>
+        </div>
+      </div>
+      <div class="modal-footer stats-footer">
+        <button id="shareBtn" class="action-btn share-btn">
+          📋 Jaa tulos
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Dialog: Asetukset -->
+  <dialog id="settingsDialog" class="modal-dialog" closedby="any" aria-labelledby="settingsDialogTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="settingsDialogTitle">Asetukset</h2>
+        <form method="dialog"><button class="close-x" aria-label="Sulje">&times;</button></form>
+      </div>
+      <div class="modal-body settings-list">
+        <div class="setting-item">
+          <div class="setting-text">
+            <label for="themeToggle"><strong>Tumma teema</strong></label>
+            <span>Vaihda tumman ja vaalean ulkoasun välillä</span>
+          </div>
+          <input type="checkbox" id="themeToggle" class="toggle-checkbox" checked>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-text">
+            <label for="contrastToggle"><strong>Korkea kontrasti</strong></label>
+            <span>Parantaa värierottelua (oranssi & sininen)</span>
+          </div>
+          <input type="checkbox" id="contrastToggle" class="toggle-checkbox">
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-text">
+            <label for="hintToggle"><strong>Sanaluokkavihje</strong></label>
+            <span>Näyttää onko sana substantiivi, adjektiivi vai verbi</span>
+          </div>
+          <input type="checkbox" id="hintToggle" class="toggle-checkbox">
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-text">
+            <label for="soundToggle"><strong>Ääniefektit</strong></label>
+            <span>Soita ääniä näppäilyistä ja voitoista</span>
+          </div>
+          <input type="checkbox" id="soundToggle" class="toggle-checkbox" checked>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <form method="dialog">
+          <button class="action-btn">Valmis</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Dialog: Pelin päättyminen (Voitto tai Häviö) -->
+  <dialog id="gameOverDialog" class="modal-dialog" closedby="any" aria-labelledby="gameOverTitle">
+    <div class="modal-content game-over-content">
+      <div class="modal-header">
+        <h2 id="gameOverTitle">Onneksi olkoon! 🎉</h2>
+        <form method="dialog"><button class="close-x" aria-label="Sulje">&times;</button></form>
+      </div>
+      <div class="modal-body center-text">
+        <div id="gameOverWordReveal" class="word-reveal">
+          Oikea sana oli: <strong id="revealedWord" class="highlight-word">--</strong>
+        </div>
+        <div class="word-pos-info">
+          Sanaluokka: <span id="revealedPos" class="pos-tag">Substantiivi</span>
+        </div>
+
+        <div class="dict-link-container">
+          <a id="dictLink" href="#" target="_blank" rel="noopener noreferrer" class="dict-btn">
+            📖 Katso sanan määritelmä Kielitoimiston sanakirjasta ↗
+          </a>
+        </div>
+
+        <div class="game-over-stats" id="roundStatsSummary">
+          <!-- Summary info -->
+        </div>
+      </div>
+      <div class="modal-footer game-over-actions">
+        <button id="gameOverShareBtn" class="action-btn share-btn">
+          📋 Jaa tulos
+        </button>
+        <button id="gameOverPlayAgainBtn" class="action-btn primary-btn">
+          Pelaa uudelleen ↻
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
