@@ -1,5 +1,5 @@
 """
-Sanadruidi - Suomenkielinen Wordle-sanapeli
+Sanakuutio - Suomenkielinen Wordle-sanapeli
 FastAPI Backend
 """
 
@@ -20,7 +20,7 @@ DATA_DIR = BASE_DIR / "data"
 WORDS_FILE = DATA_DIR / "words.json"
 
 app = FastAPI(
-    title="Sanadruidi",
+    title="Sanakuutio",
     description="Suomenkielinen Wordle-sanapeli (4–8-kirjaimiset substantiivit, adjektiivit ja verbit)",
     version="1.0.0"
 )
@@ -48,7 +48,7 @@ for k, targets_list in TARGETS.items():
     for t in targets_list:
         GUESSES[k].add(t["w"])
 
-print(f"Loaded Sanadruidi dictionary:")
+print(f"Loaded Sanakuutio dictionary:")
 for length_str in sorted(TARGETS.keys(), key=int):
     print(f"  Length {length_str}: {len(TARGETS[length_str])} targets, {len(GUESSES[length_str])} valid guesses")
 
@@ -128,7 +128,7 @@ def pick_target(length: int, category: str, mode: str, date_str: Optional[str]) 
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "app": "Sanadruidi", "version": "1.0.0"}
+    return {"status": "ok", "app": "Sanakuutio", "version": "1.0.0"}
 
 
 @app.post("/api/game/new")

@@ -1,5 +1,5 @@
 /**
- * Sanadruidi - Client Game Engine
+ * Sanakuutio - Client Game Engine
  */
 
 (function () {
@@ -91,9 +91,9 @@
   };
 
   // LocalStorage Keys
-  const STORAGE_KEY_SETTINGS = "sanadruidi_settings";
-  const STORAGE_KEY_STATS = "sanadruidi_stats";
-  const STORAGE_KEY_DAILY_PREFIX = "sanadruidi_daily_";
+  const STORAGE_KEY_SETTINGS = "sanakuutio_settings";
+  const STORAGE_KEY_STATS = "sanakuutio_stats";
+  const STORAGE_KEY_DAILY_PREFIX = "sanakuutio_daily_";
 
   // Elements
   const el = {
@@ -606,7 +606,7 @@
 
   // Share Result with Emoji Grid
   function generateShareText() {
-    const title = `Sanadruidi (${state.length} kirj.)`;
+    const title = `Sanakuutio (${state.length} kirj.)`;
     const score = state.isGameOver && state.boardData.some(row => row.every(t => t.status === "correct" || t.el.classList.contains("correct")))
       ? `${state.currentRow + 1}/6`
       : "X/6";
@@ -646,7 +646,7 @@
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Sanadruidi",
+          title: "Sanakuutio",
           text: text
         });
         return;

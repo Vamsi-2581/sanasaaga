@@ -1,10 +1,10 @@
 services:
-  sanadruidi:
+  sanakuutio:
     build:
       context: .
       dockerfile: Containerfile
-    image: sanadruidi:latest
-    container_name: sanadruidi
+    image: sanakuutio:latest
+    container_name: sanakuutio
     ports:
       - "8000:8000"
     restart: unless-stopped

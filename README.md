@@ -1,6 +1,6 @@
-# 🌿 Sanadruidi - Suomenkielinen Wordle
+# 🌿 Sanakuutio - Suomenkielinen Wordle
 
-**Sanadruidi** on moderni, selaimessa toimiva suomenkielinen Wordle-sanapeli, joka on paketoitu kevyeksi Podman-kontiksi.
+**Sanakuutio** on moderni, selaimessa toimiva suomenkielinen Wordle-sanapeli, joka on paketoitu kevyeksi Podman-kontiksi.
 
 Pelissä arvaat 4–8-kirjaimisia suomen kielen sanoja niiden perusmuodossa (substantiiveja, adjektiiveja tai verbejä).
 
@@ -50,12 +50,12 @@ PORT=8080 ./run.sh
 
 1. Rakenna kontti:
    ```bash
-   podman build -t sanadruidi:latest .
+   podman build -t sanakuutio:latest .
    ```
 
 2. Käynnistä kontti:
    ```bash
-   podman run -d --name sanadruidi -p 8000:8000 sanadruidi:latest
+   podman run -d --name sanakuutio -p 8000:8000 sanakuutio:latest
    ```
 
 3. Avaa selaimessa:
@@ -77,17 +77,17 @@ docker compose up -d
 
 - **Katso kontin lokit:**
   ```bash
-  podman logs -f sanadruidi
+  podman logs -f sanakuutio
   ```
 
 - **Pysäytä kontti:**
   ```bash
-  podman stop sanadruidi
+  podman stop sanakuutio
   ```
 
 - **Käynnistä uudelleen:**
   ```bash
-  podman restart sanadruidi
+  podman restart sanakuutio
   ```
 
 ---
@@ -95,7 +95,7 @@ docker compose up -d
 ## 📂 Projektirakenne
 
 ```
-sanadruidi/
+sanakuutio/
 ├── app.py                  # FastAPI-taustapalvelin ja pelilogiikka
 ├── Containerfile           # Podman-konttimäärittely
 ├── Dockerfile              # Docker-yhteensopiva konttimäärittely
