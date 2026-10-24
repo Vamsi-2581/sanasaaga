@@ -1,133 +1,132 @@
-# 🌿 Sanakuutio - Suomenkielinen Wordle
+# 🌿 Sanakuutio - Finnish Wordle
 
-**Sanakuutio** on moderni, selaimessa toimiva suomenkielinen Wordle-sanapeli, joka on paketoitu kevyeksi Podman-kontiksi.
+**Sanakuutio** is a modern Finnish Wordle word game.
+The project is built as a decoupled microservices architecture:
+* **Frontend**: Svelte 5 + Vite (packaged into an ultra-lightweight `nginx:alpine` container, ~13 MB RAM).
+* **Backend**: PocketBase (Go + embedded SQLite + OAuth2 + game engine as JS hooks, ~70 MB RAM).
 
-Pelissä arvaat 4–8-kirjaimisia suomen kielen sanoja niiden perusmuodossa (substantiiveja, adjektiiveja tai verbejä).
-
----
-
-## ✨ Ominaisuudet
-
-- **Sanan pituus**: Valitse vapaasti sanan pituus väliltä **4–8 kirjainta** (oletus 5, klassinen Wordle).
-- **Sanaluokat**: Rajaa kätketyt sanat sanaluokan mukaan (**Kaikki**, **Substantiivit**, **Adjektiivit** tai **Verbit**).
-- **Päivän sana & Vapaa peli**:
-  - **Päivän sana**: Päivämäärään perustuva haaste (sama sana kaikille pelaajille kunakin päivänä).
-  - **Vapaa peli**: Pelaa rajattomasti satunnaisilla sanoilla.
-- **Laadukas sanasto**:
-  - Kätketyt sanat ovat suomen kielen perusmuotoisia substantiiveja, adjektiiveja ja verbejä.
-  - Hyväksytyt arvaukset kattavat yli **25 000 suomenkielistä sanaa**, joten lailliset sanat eivät jää tunnistamatta.
-  - Lähteinä Kotimaisten kielten keskuksen ([Kotus](https://kaino.kotus.fi/sanat/nykysuomi/)) Nykysuomen sanalista sekä Voikon [Joukahainen](https://joukahainen.puimula.org/)-morfologiamalli.
-- **Kielitoimiston sanakirja -integraatio**: Kierroksen päätyttyä voit yhdellä klikkauksella avata sanan virallisen määritelmän Kotuksen Kielitoimiston sanakirjasta.
-- **Täysi suomalainen näppäimistö**: Ruudulla on virtuaalinen näppäimistö (sis. **Å**, **Ä** ja **Ö**), ja peli tukee suoraa kirjoittamista fyysisellä näppäimistöllä.
-- **Tilastot & Jakaminen**:
-  - Voittoprosentit, voittoputket ja arvausjakauma tallentuvat selaimeen (`localStorage`).
-  - Wordle-tyylinen emoji-tuloksen jako leikepöydälle (🟩🟨⬛).
-- **Ulkoasu & Saavutettavuus**:
-  - Tumma ja vaalea teema.
-  - Korkean kontrastin tila (oranssi ja sininen värisokeille).
-  - Valinnainen sanaluokkavihje.
-  - Synteettiset ääniefektit Web Audio API:lla (ei ulkoisia äänitiedostoja).
+The entire stack consumes less than **85 MB of memory**, making it ideal for low-spec environments and home servers.
 
 ---
 
-## 🚀 Käynnistys Podmanilla
+## ✨ Features
 
-### Vaihtoehto A: Käynnistysskriptillä (helpoin)
+- **Word Length**: Choose any word length between **4–8 letters** (default 5, classic Wordle).
+- **Parts of Speech**: Filter target words by part of speech (**All**, **Nouns**, **Adjectives**, or **Verbs**).
+- **Daily Challenge & Free Play**:
+  - **Daily Word**: Deterministic SHA-256 challenge (the same word for all players each day). In-progress games automatically restore for authenticated users.
+  - **Free Play**: Play unlimited rounds with random words.
+- **High-Quality Vocabulary**:
+  - Over **25,000 valid Finnish words**.
+  - Sourced from the Institute for the Languages of Finland ([Kotus](https://kaino.kotus.fi/sanat/nykysuomi/)) Contemporary Finnish Wordlist and Voikko's [Joukahainen](https://joukahainen.puimula.org/) morphology database.
+- **Dictionary Integration**: At the end of a round, open the official definition directly in Kotus's Kielitoimiston sanakirja with one click.
+- **User Accounts & Privacy by Design**:
+  - Optional Google OAuth login.
+  - **Zero personal data stored**: We do not store user email addresses or real names. The system automatically assigns a random, anonymous Finnish animal gamer tag (e.g. *Kettu412* or *Ilves809*), which players can customize.
+  - Guest mode available without registration (stats saved locally in `localStorage`).
+- **Design & Accessibility**:
+  - Dark and Light themes.
+  - High-contrast mode (orange and blue for colorblind accessibility).
+  - Web Audio API synthetic sound effects (zero audio file downloads).
+  - PWA (Progressive Web App): Installable directly to mobile home screens.
 
+---
+
+## 🚀 Running with Podman
+
+### Option A: Using the Runner Script (Easiest)
 ```bash
 ./run.sh
 ```
 
-Skripti rakentaa kontin (jos sitä ei vielä ole) ja käynnistää sen taustalle. Peli avautuu osoitteessa:
-👉 **[http://localhost:8000](http://localhost:8000)** (tai `http://127.0.0.1:8000`)
-
-Voit määrittää haluamasi portin ympäristömuuttujalla:
-```bash
-PORT=8080 ./run.sh
-```
-
-### Vaihtoehto B: Podman-komennoilla suoraan
-
-1. Rakenna kontti:
-   ```bash
-   podman build -t sanakuutio:latest .
-   ```
-
-2. Käynnistä kontti:
-   ```bash
-   podman run -d --name sanakuutio -p 8000:8000 sanakuutio:latest
-   ```
-
-3. Avaa selaimessa:
-   ```
-   http://localhost:8000
-   ```
-
-### Vaihtoehto C: Podman Compose / Docker Compose
-
+### Option B: Using Podman Compose
 ```bash
 podman-compose up -d
-# tai
-docker compose up -d
+# or
+podman compose up -d
+```
+
+Open the game in your browser:
+👉 **[http://localhost:8000](http://localhost:8000)**
+
+The PocketBase Admin UI is available at:
+👉 **[http://localhost:8000/_/](http://localhost:8000/_/)**
+
+To stop the containers:
+```bash
+podman-compose down
 ```
 
 ---
 
-## 🛠 Hallintakomennot
+## 🛠 Local Development (Without Containers)
 
-- **Katso kontin lokit:**
-  ```bash
-  podman logs -f sanakuutio
-  ```
+If you want to run the frontend and backend directly on your host machine:
 
-- **Pysäytä kontti:**
-  ```bash
-  podman stop sanakuutio
-  ```
+### 1. Start Backend (PocketBase)
+```bash
+cd backend
+./pocketbase serve --http=127.0.0.1:8090
+```
 
-- **Käynnistä uudelleen:**
-  ```bash
-  podman restart sanakuutio
-  ```
+### 2. Start Frontend (Svelte 5 + Vite)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+The Vite development server opens at `http://localhost:5173` and automatically proxies `/api/*` and `/_/*` requests to the local PocketBase instance.
 
 ---
 
-## 📂 Projektirakenne
+## 📂 Project Structure
 
 ```
 sanakuutio/
-├── app.py                  # FastAPI-taustapalvelin ja pelilogiikka
-├── Containerfile           # Podman-konttimäärittely
-├── Dockerfile              # Docker-yhteensopiva konttimäärittely
-├── docker-compose.yml      # Podman/Docker Compose -määrittely
-├── requirements.txt        # Python-riippuvuudet (FastAPI, Uvicorn, Pydantic)
-├── run.sh                  # Yhden komennon käynnistysskripti
+├── backend/
+│   ├── Containerfile          # Alpine + PocketBase container definition (~22 MB)
+│   ├── pb_hooks/
+│   │   ├── init.pb.js         # Automatic database schema bootstrapper (games, friendships)
+│   │   ├── users.pb.js        # OAuth privacy hook: strips real names & assigns animal tags
+│   │   ├── game_engine.js     # Finnish Wordle engine and validation rules
+│   │   ├── game.pb.js         # Game API routes (/api/game/*, /api/words/check)
+│   │   └── words.js           # 25k+ Kotus wordlist loaded in-memory
+│   └── scripts/
+│       └── export_words.py    # Utility script to export words.json -> words.js
+├── frontend/
+│   ├── Containerfile          # Multi-stage build definition (Node -> Nginx:alpine)
+│   ├── nginx.conf             # Nginx server + SPA routing + internal API proxy
+│   ├── src/
+│   │   ├── App.svelte         # Main game state orchestrator
+│   │   ├── app.css            # Responsive themes (dark, light, high contrast)
+│   │   ├── lib/
+│   │   │   ├── api.js         # PocketBase client & API requests
+│   │   │   ├── sounds.js      # Web Audio API sound synthesizer
+│   │   │   └── components/    # Svelte components (Board, Keyboard, Modals, etc.)
+│   │   └── main.js            # Svelte 5 application entry point
+│   └── package.json
 ├── data/
-│   └── words.json          # Jäsennelty ja luokiteltu suomen sanasto (4–8 kirj.)
-├── scripts/
-│   └── prepare_words.py    # Skripti sanaston noutoon ja luokitteluun
-└── web/
-    ├── templates/
-    │   └── index.html      # Saavutettava HTML5-käyttöliittymä
-    └── static/
-        ├── css/
-        │   └── style.css   # Responsiivinen ulkoasu, animaatiot ja teemat
-        └── js/
-            └── app.js      # Pelimoottori, virtuaalinäppäimistö ja tilastot
+│   └── words.json             # Source parsed Kotus dictionary
+├── old/                       # Archived Python FastAPI proof-of-concept
+├── compose.yaml               # Container compose definition
+├── compose.prod.yaml          # Production compose definition (pulls from GHCR)
+├── run.sh                     # Podman execution script
+├── ARCHITECTURE.md            # System architecture and technical documentation
+└── README.md
 ```
 
 ---
 
-## 📚 Sanaston päivitys
+## 📚 Updating the Vocabulary
 
-Jos haluat päivittää tai generoida sanaston uudelleen verkosta:
+To update or regenerate the Kotus wordlist from upstream sources:
 
 ```bash
 python3 scripts/prepare_words.py
 ```
 
-Skripti hakee automaattisesti:
-1. Kotuksen nykysuomen sanalistan XML- ja tekstiversion
-2. Voikon Joukahainen-tietokannan tarkat sanaluokkatiedot (substantiivit, adjektiivit, verbit)
-3. Suomen kielen 50k sanan frekvenssitilaston
-ja tuottaa optimoidun `data/words.json`-tiedoston.
+This script automatically downloads:
+1. The Kotus Contemporary Finnish Wordlist (XML & text).
+2. Voikko's Joukahainen morphology database for parts of speech (nouns, adjectives, verbs).
+3. Finnish 50k word frequency lists.
+And generates an optimized `data/words.json` file.

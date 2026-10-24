@@ -2,35 +2,27 @@
 set -e
 
 PORT="${PORT:-8000}"
-IMAGE_NAME="sanakuutio:latest"
-CONTAINER_NAME="sanakuutio"
 
-echo "🌿 Sanakuutio - Suomenkielinen Wordle"
-echo "======================================"
+echo "🌿 Sanakuutio - Finnish Wordle (Podman)"
+echo "========================================"
 
-# Check if image exists, build if not
-if ! podman image exists "${IMAGE_NAME}"; then
-  echo "Rakennetaan Podman-kontti (${IMAGE_NAME})..."
-  podman build -t "${IMAGE_NAME}" .
+if command -v podman-compose >/dev/null 2>&1; then
+  COMPOSE_CMD="podman-compose"
+elif podman compose version >/dev/null 2>&1; then
+  COMPOSE_CMD="podman compose"
+else
+  echo "Error: Neither podman-compose nor podman compose is installed."
+  exit 1
 fi
 
-# Stop existing container if running
-if podman container exists "${CONTAINER_NAME}"; then
-  echo "Pysäytetään aiempi kontti..."
-  podman stop "${CONTAINER_NAME}" >/dev/null 2>&1 || true
-  podman rm "${CONTAINER_NAME}" >/dev/null 2>&1 || true
-fi
-
-echo "Käynnistetään Sanakuutio porttiin ${PORT}..."
-podman run -d \
-  --name "${CONTAINER_NAME}" \
-  -p "${PORT}:8000" \
-  "${IMAGE_NAME}"
+echo "Starting services with Podman ($COMPOSE_CMD)..."
+$COMPOSE_CMD up -d --build
 
 echo ""
-echo "✅ Sanakuutio on käynnissä!"
-echo "👉 Avaa selaimessa: http://localhost:${PORT} tai http://127.0.0.1:${PORT}"
+echo "✅ Sanakuutio is running with Podman!"
+echo "👉 Game:        http://localhost:${PORT}"
+echo "👉 PocketBase:  http://localhost:${PORT}/_/"
 echo ""
-echo "Hyödyllisiä komentoja:"
-echo "  Lokit:      podman logs -f ${CONTAINER_NAME}"
-echo "  Pysäytys:   podman stop ${CONTAINER_NAME}"
+echo "Helpful commands:"
+echo "  Logs:   $COMPOSE_CMD logs -f"
+echo "  Stop:   $COMPOSE_CMD down"

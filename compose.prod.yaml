@@ -1,0 +1,28 @@
+# Production Compose file pulling pre-built images from GitHub Container Registry (GHCR)
+# Replace <YOUR_GITHUB_USERNAME_LOWERCASE> with your GitHub username or organization name.
+
+services:
+  backend:
+    image: ghcr.io/${GHCR_OWNER:-sanakuutio}/backend:latest
+    restart: unless-stopped
+    volumes:
+      - pb_data:/pb/pb_data
+    networks:
+      - sanakuutio-net
+
+  frontend:
+    image: ghcr.io/${GHCR_OWNER:-sanakuutio}/frontend:latest
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    depends_on:
+      - backend
+    networks:
+      - sanakuutio-net
+
+volumes:
+  pb_data:
+
+networks:
+  sanakuutio-net:
+    driver: bridge
