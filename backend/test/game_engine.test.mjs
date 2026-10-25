@@ -187,6 +187,32 @@ describe('getFinlandDateStr', () => {
     }));
 });
 
+describe('canAccessGame', () => {
+    test('guest games are playable by anyone', () => {
+        assert.equal(engine.canAccessGame('', null), true);
+        assert.equal(engine.canAccessGame('', 'user1'), true);
+    });
+
+    test('owned games only by their owner', () => {
+        assert.equal(engine.canAccessGame('user1', 'user1'), true);
+        assert.equal(engine.canAccessGame('user1', 'user2'), false);
+        assert.equal(engine.canAccessGame('user1', null), false);
+    });
+});
+
+describe('isAbandonable', () => {
+    test('only earlier dates may be abandoned', () => {
+        assert.equal(engine.isAbandonable('2025-06-14', '2025-06-15'), true);
+        assert.equal(engine.isAbandonable('2025-06-15', '2025-06-15'), false);
+        assert.equal(engine.isAbandonable('2025-06-16', '2025-06-15'), false);
+    });
+
+    test('missing date is not abandonable', () => {
+        assert.equal(engine.isAbandonable('', '2025-06-15'), false);
+        assert.equal(engine.isAbandonable(undefined, '2025-06-15'), false);
+    });
+});
+
 describe('serializeGame (anti-cheat)', () => {
     const base = {
         session_id: 'abc123',

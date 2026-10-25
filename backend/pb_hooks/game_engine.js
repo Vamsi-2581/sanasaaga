@@ -221,6 +221,24 @@ function isValidGuess(guess, length) {
     return s ? s.has(guess) : false;
 }
 
+// ---------------------------------------------------------------------------
+// Access control helpers
+// ---------------------------------------------------------------------------
+
+// A game belongs either to a user or to nobody (guest game). Guests may only
+// touch unowned games; authenticated users may only touch their own.
+// `gameUserId` is the stored relation id ("" for guest games).
+function canAccessGame(gameUserId, authId) {
+    if (!gameUserId) return true;
+    return !!authId && gameUserId === authId;
+}
+
+// Only a daily game from an earlier Helsinki date may be given up; abandoning
+// today's game would reveal today's secret word.
+function isAbandonable(dateStr, today) {
+    return !!dateStr && dateStr < today;
+}
+
 function getDefinitionUrl(word) {
     return "https://www.kielitoimistonsanakirja.fi/#/" + encodeURIComponent(word);
 }
@@ -231,6 +249,8 @@ module.exports = {
     pickRandomTarget: pickRandomTarget,
     evaluateGuess: evaluateGuess,
     isValidGuess: isValidGuess,
+    canAccessGame: canAccessGame,
+    isAbandonable: isAbandonable,
     getDefinitionUrl: getDefinitionUrl,
     getFinlandDateStr: getFinlandDateStr,
     serializeGame: serializeGame,

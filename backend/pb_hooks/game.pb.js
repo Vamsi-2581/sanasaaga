@@ -33,9 +33,8 @@ routerAdd("POST", "/api/game/new", (e) => {
                     { sid: body.session_id }
                 );
                 if (!rec.get("finished")) {
-                    const gameUser = rec.get("user");
                     // Resume only the owner's game, or an unowned (guest) game.
-                    if (!gameUser || (e.auth && gameUser === e.auth.id)) {
+                    if (engine.canAccessGame(rec.get("user"), e.auth ? e.auth.id : null)) {
                         return e.json(200, engine.serializeGame(rec, rec.get("date_str") !== today));
                     }
                 }
@@ -147,12 +146,15 @@ routerAdd("POST", "/api/game/daily/abandon", (e) => {
         return e.json(400, { error: "Peli on jo päättynyt." });
     }
 
-    // Ownership check for authenticated users.
-    if (e.auth) {
-        const gameUser = rec.get("user");
-        if (gameUser && gameUser !== e.auth.id) {
-            return e.json(403, { error: "Ei oikeutta tähän peliin." });
-        }
+    // Ownership: only the owner (or nobody, for guest games) may give up a game.
+    if (!engine.canAccessGame(rec.get("user"), e.auth ? e.auth.id : null)) {
+        return e.json(403, { error: "Ei oikeutta tähän peliin." });
+    }
+
+    // Only a game from an earlier Helsinki day may be given up, otherwise this
+    // endpoint would hand out today's secret word.
+    if (!engine.isAbandonable(rec.get("date_str"), today)) {
+        return e.json(400, { error: "Vain edellisen päivän pelin voi jättää kesken." });
     }
 
     // Record the abandoned game as a loss.
@@ -201,6 +203,11 @@ routerAdd("POST", "/api/game/guess", (e) => {
 
     if (rec.get("finished")) {
         return e.json(400, { error: "Peli on jo päättynyt." });
+    }
+
+    // Ownership: only the owner (or nobody, for guest games) may play a game.
+    if (!engine.canAccessGame(rec.get("user"), e.auth ? e.auth.id : null)) {
+        return e.json(403, { error: "Ei oikeutta tähän peliin." });
     }
 
     const length = rec.get("length");
@@ -286,11 +293,13 @@ routerAdd("GET", "/api/game/stats", (e) => {
         return e.json(401, { error: "Authentication required to view statistics." });
     }
 
-    // Fetch user's finished games
+    // Daily games only: free play is unlimited, so mixing it in would inflate
+    // streaks and win rate. date_str is YYYY-MM-DD, so it sorts chronologically
+    // and does not depend on the record created/updated timestamps.
     const records = e.app.findRecordsByFilter(
         "games",
-        "user = {:uid} && finished = true",
-        "-created",
+        "user = {:uid} && finished = true && mode = 'daily'",
+        "-date_str",
         500,
         0,
         { uid: e.auth.id }
