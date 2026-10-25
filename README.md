@@ -11,11 +11,11 @@ The entire stack consumes less than **85 MB of memory**, making it ideal for low
 
 ## ✨ Features
 
-- **Word Length**: Choose any word length between **4–8 letters** (default 5, classic Wordle).
-- **Parts of Speech**: Filter target words by part of speech (**All**, **Nouns**, **Adjectives**, or **Verbs**).
+- **Word Length** (Free Play): Choose any word length between **4–8 letters** (default 5, classic Wordle). The daily challenge length is random.
+- **Parts of Speech** (Free Play): Filter target words by part of speech (**All**, **Nouns**, **Adjectives**, or **Verbs**). The daily challenge draws from all classes.
 - **Daily Challenge & Free Play**:
-  - **Daily Word**: Deterministic SHA-256 challenge (the same word for all players each day). In-progress games automatically restore for authenticated users.
-  - **Free Play**: Play unlimited rounds with random words.
+  - **Daily Word**: One word per day, identical for every player. The word length (4–8) and word class (noun, adjective or verb) are both random, drawn from the whole dictionary. A server-side secret (`DAILY_WORD_SECRET` env var) is mixed into the SHA-256 seed so the word cannot be reconstructed even with the dictionary. The word changes at midnight **Helsinki time** (with DST); an in-progress game can be finished past midnight, or given up to start the new day's word.
+  - **Free Play**: Play unlimited rounds with random words; choose any word length (4–8) and optionally filter by part of speech.
 - **High-Quality Vocabulary**:
   - Over **25,000 valid Finnish words**.
   - Sourced from the Institute for the Languages of Finland ([Kotus](https://kaino.kotus.fi/sanat/nykysuomi/)) Contemporary Finnish Wordlist and Voikko's [Joukahainen](https://joukahainen.puimula.org/) morphology database.
@@ -33,6 +33,8 @@ The entire stack consumes less than **85 MB of memory**, making it ideal for low
 ---
 
 ## 🚀 Running with Podman
+
+> **Required env var:** The daily challenge needs `DAILY_WORD_SECRET`. Copy `.env.example` to `.env` and set a long random string, or `export DAILY_WORD_SECRET=...` in your shell before starting the stack. The backend refuses to start a daily game if it is unset.
 
 ### Option A: Using the Runner Script (Easiest)
 ```bash
@@ -66,7 +68,7 @@ If you want to run the frontend and backend directly on your host machine:
 ### 1. Start Backend (PocketBase)
 ```bash
 cd backend
-./pocketbase serve --http=127.0.0.1:8090
+DAILY_WORD_SECRET=your-secret-here ./pocketbase serve --http=127.0.0.1:8090
 ```
 
 ### 2. Start Frontend (Svelte 5 + Vite)

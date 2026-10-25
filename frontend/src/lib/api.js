@@ -21,18 +21,36 @@ export async function updateUsername(newUsername) {
   });
 }
 
-export async function newGame({ length = 5, category = 'all', mode = 'random', date_str = null }) {
+export async function newGame({ length = 5, category = 'all', mode = 'random', date_str = null, session_id = null } = {}) {
   const res = await fetch('/api/game/new', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...(pb.authStore.token ? { Authorization: `Bearer ${pb.authStore.token}` } : {})
     },
-    body: JSON.stringify({ length, category, mode, date_str })
+    body: JSON.stringify({ length, category, mode, date_str, session_id })
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || 'Virhe uuden pelin aloittamisessa');
+  }
+  return await res.json();
+}
+
+// Give up an in-progress daily game from a previous day and start today's.
+// The abandoned game is recorded as a loss server-side.
+export async function abandonDaily({ sessionId }) {
+  const res = await fetch('/api/game/daily/abandon', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(pb.authStore.token ? { Authorization: `Bearer ${pb.authStore.token}` } : {})
+    },
+    body: JSON.stringify({ session_id: sessionId })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Pelin peruutus epäonnistui');
   }
   return await res.json();
 }

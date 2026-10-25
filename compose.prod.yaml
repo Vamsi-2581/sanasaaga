@@ -4,6 +4,11 @@
 services:
   backend:
     image: ghcr.io/${GHCR_OWNER:-sanakuutio}/backend:latest
+    # Server-side secret for the daily challenge. Must be provided by the
+    # deployment environment (runner env / .env). The backend refuses to start
+    # a daily game if it is unset.
+    environment:
+      - DAILY_WORD_SECRET=${DAILY_WORD_SECRET:-}
     restart: unless-stopped
     volumes:
       - pb_data:/pb/pb_data

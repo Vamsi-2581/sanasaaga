@@ -8,7 +8,8 @@
     getStats,
     loginWithGoogle,
     logout as pbLogout,
-    updateUsername as pbUpdateUsername
+    updateUsername as pbUpdateUsername,
+    abandonDaily as pbAbandonDaily
   } from './lib/api.js';
   import { sounds } from './lib/sounds.js';
 
@@ -33,6 +34,7 @@
   let isWin = $state(false);
   let secret = $state('');
   let definitionUrl = $state('');
+  let dayChanged = $state(false);
   let isSubmitting = $state(false);
   let shakeRow = $state(-1);
   let keyStatuses = $state({});
@@ -123,6 +125,24 @@
     } catch (e) {}
   }
 
+  // --- Daily challenge session persistence (guest resume + midnight rollover) ---
+  // While a daily game is in progress, its session_id is tracked here so a
+  // reload (including across the Helsinki midnight rollover) resumes the same
+  // game instead of starting a new one. Cleared when the game ends or is given up.
+  function loadDailySessionId() {
+    try {
+      return localStorage.getItem('sanakuutio_daily_session') || null;
+    } catch (e) {
+      return null;
+    }
+  }
+  function saveDailySessionId(id) {
+    try {
+      if (id) localStorage.setItem('sanakuutio_daily_session', id);
+      else localStorage.removeItem('sanakuutio_daily_session');
+    } catch (e) {}
+  }
+
   async function fetchServerStats() {
     if (user) {
       const serverStats = await getStats();
@@ -154,26 +174,72 @@
       isWin = false;
       secret = '';
       definitionUrl = '';
+      dayChanged = false;
       keyStatuses = {};
+
+      // In daily mode, resume the tracked in-progress session if there is one
+      // (lets guests and authed players continue across reloads and midnight).
+      const resumeId = mode === 'daily' ? loadDailySessionId() : null;
 
       const gameData = await newGame({
         length,
         category,
-        mode
+        mode,
+        session_id: resumeId
       });
 
       sessionId = gameData.session_id;
+      // Daily mode picks a random length server-side; always trust the server.
+      length = gameData.length || length;
       pos = gameData.pos || '';
       guesses = gameData.guesses || [];
       isGameOver = gameData.finished || false;
       isWin = gameData.won || false;
+      dayChanged = !!gameData.day_changed;
       if (gameData.secret) {
         secret = gameData.secret;
         definitionUrl = gameData.definition_url || '';
       }
       updateKeyStatuses(guesses);
+
+      // Track the active daily session only while the game is in progress.
+      if (mode === 'daily' && !isGameOver) {
+        saveDailySessionId(sessionId);
+      } else if (mode === 'daily') {
+        saveDailySessionId(null);
+      }
     } catch (err) {
       addToast(err.message || 'Pelin alustus epäonnistui');
+    }
+  }
+
+  async function giveUpDaily() {
+    if (!sessionId || isSubmitting) return;
+    isSubmitting = true;
+    try {
+      const gameData = await pbAbandonDaily({ sessionId });
+
+      sessionId = gameData.session_id;
+      length = gameData.length || length;
+      pos = gameData.pos || '';
+      guesses = gameData.guesses || [];
+      currentGuess = '';
+      isGameOver = false;
+      isWin = false;
+      secret = '';
+      definitionUrl = '';
+      dayChanged = false;
+      keyStatuses = {};
+      updateKeyStatuses(guesses);
+
+      if (mode === 'daily') {
+        saveDailySessionId(isGameOver ? null : sessionId);
+      }
+      addToast('Uusi päivän sana aloitettu');
+    } catch (err) {
+      addToast(err.message || 'Pelin peruutus epäonnistui');
+    } finally {
+      isSubmitting = false;
     }
   }
 
@@ -249,6 +315,11 @@
         isWin = res.is_win;
         secret = res.secret || '';
         definitionUrl = res.definition_url || '';
+
+        // The daily session is no longer resumable once the game is over.
+        if (mode === 'daily') {
+          saveDailySessionId(null);
+        }
 
         setTimeout(() => {
           if (res.is_win) {
@@ -366,20 +437,29 @@
     onOpenAuth={() => { isAuthOpen = true; }}
   />
 
-  <div class="controls-bar">
-    <div class="controls-group">
-      <span style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700;">PITUUS:</span>
-      <div class="pill-select">
-        {#each [4, 5, 6, 7, 8] as len}
-          <button
-            class="pill-btn {length === len ? 'active' : ''}"
-            onclick={() => { length = len; initGame(); }}
-          >
-            {len}
-          </button>
-        {/each}
-      </div>
+  {#if mode === 'daily' && dayChanged && !isGameOver}
+    <div class="day-changed-banner">
+      <span>Pelaat vielä eilistä sanaa.</span>
+      <button class="btn-primary day-changed-btn" onclick={giveUpDaily}>Anna periksi – pelaa tänään</button>
     </div>
+  {/if}
+
+  <div class="controls-bar">
+    {#if mode === 'random'}
+      <div class="controls-group">
+        <span style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700;">PITUUS:</span>
+        <div class="pill-select">
+          {#each [4, 5, 6, 7, 8] as len}
+            <button
+              class="pill-btn {length === len ? 'active' : ''}"
+              onclick={() => { length = len; initGame(); }}
+            >
+              {len}
+            </button>
+          {/each}
+        </div>
+      </div>
+    {/if}
 
     <div class="controls-group">
       <div class="pill-select">

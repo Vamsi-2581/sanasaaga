@@ -234,6 +234,29 @@ body {
   color: var(--accent-color);
 }
 
+/* Day-changed banner (midnight rollover: give up yesterday's daily game) */
+.day-changed-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 6px 4px 0;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--accent-color);
+  border-radius: 12px;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.day-changed-btn {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  border-radius: 14px;
+  white-space: nowrap;
+}
+
 /* Board Area */
 .board-container {
   flex: 1;

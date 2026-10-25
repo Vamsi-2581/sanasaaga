@@ -2,6 +2,11 @@ services:
   backend:
     build:
       context: ./backend
+    # Server-side secret for the daily challenge (see .env.example). The backend
+    # refuses to start a daily game if this is unset. Set it via a .env file or
+    # your shell environment before running the stack.
+    environment:
+      - DAILY_WORD_SECRET=${DAILY_WORD_SECRET:-}
     restart: unless-stopped
     volumes:
       - pb_data:/pb/pb_data

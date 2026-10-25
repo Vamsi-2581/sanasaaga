@@ -5,63 +5,89 @@ routerAdd("GET", "/health", (e) => {
     return e.json(200, {
         status: "ok",
         app: "Sanakuutio",
-        version: "2.0.0-pocketbase"
+        version: "2.1.0-pocketbase"
     });
 });
 
+// Start or resume a game.
+//   Daily mode: one word per Helsinki day, same for everyone, random length
+//   (4-8) and word class. In-progress daily games are resumed across the
+//   midnight rollover (the server returns day_changed=true). Free play keeps
+//   the client-selected length/category.
 routerAdd("POST", "/api/game/new", (e) => {
     const engine = require(`${__hooks}/game_engine.js`);
     const body = e.requestInfo().body || {};
+    const mode = body.mode || "random";
+    const today = engine.getFinlandDateStr();
 
+    // ---- Daily challenge ----
+    if (mode === "daily") {
+        // 1) Explicit resume by session_id (guests track this in localStorage; authed
+        //    clients may also send it). Lets an in-progress game survive reloads and
+        //    the midnight rollover.
+        if (body.session_id) {
+            try {
+                const rec = e.app.findFirstRecordByFilter(
+                    "games",
+                    "session_id = {:sid} && mode = 'daily'",
+                    { sid: body.session_id }
+                );
+                if (!rec.get("finished")) {
+                    const gameUser = rec.get("user");
+                    // Resume only the owner's game, or an unowned (guest) game.
+                    if (!gameUser || (e.auth && gameUser === e.auth.id)) {
+                        return e.json(200, engine.serializeGame(rec, rec.get("date_str") !== today));
+                    }
+                }
+            } catch (err) {
+                // session not found / invalid -> fall through to normal logic
+            }
+        }
+
+        // 2) Authed users: resume by user. Today's game first, then an unfinished
+        //    daily game from an earlier date (the rollover case).
+        if (e.auth) {
+            try {
+                const todayGame = e.app.findFirstRecordByFilter(
+                    "games",
+                    "user = {:uid} && mode = 'daily' && date_str = {:d}",
+                    { uid: e.auth.id, d: today }
+                );
+                return e.json(200, engine.serializeGame(todayGame, false));
+            } catch (err) {
+                // no today's game yet
+            }
+
+            try {
+                const prev = e.app.findRecordsByFilter(
+                    "games",
+                    "user = {:uid} && mode = 'daily' && finished = false && date_str < {:d}",
+                    "-date_str",
+                    1,
+                    0,
+                    { uid: e.auth.id, d: today }
+                );
+                if (prev.length > 0) {
+                    return e.json(200, engine.serializeGame(prev[0], true));
+                }
+            } catch (err) {
+                // ignore lookup errors
+            }
+        }
+
+        // 3) Otherwise create today's new daily game.
+        const targetObj = engine.pickDailyTarget(today);
+        return e.json(200, engine.createDailyGame(e.app, e.auth ? e.auth.id : null, today, targetObj));
+    }
+
+    // ---- Free play (random) ----
     const length = Number(body.length) || 5;
     if (length < 4 || length > 8) {
-        return e.json(400, { error: "Word length must be between 4 and 8 letters." });
+        return e.json(400, { error: "Sanan pituuden on oltava 4-8 kirjainta." });
     }
-
     const category = body.category || "all";
-    const mode = body.mode || "random";
-    const dateStr = body.date_str || new Date().toISOString().slice(0, 10);
 
-    // If logged in and playing daily mode, check if player already has an ongoing or finished game for this date and length
-    if (e.auth && mode === "daily") {
-        try {
-            const existing = e.app.findFirstRecordByFilter(
-                "games",
-                "user = {:uid} && date_str = {:d} && length = {:len} && mode = 'daily'",
-                { uid: e.auth.id, d: dateStr, len: length }
-            );
-            if (existing) {
-                let parsedGuesses = [];
-                try {
-                    parsedGuesses = JSON.parse(existing.get("guesses_json") || "[]");
-                } catch (err) {
-                    parsedGuesses = [];
-                }
-
-                const res = {
-                    session_id: existing.get("session_id"),
-                    length: existing.get("length"),
-                    category: existing.get("category"),
-                    mode: existing.get("mode"),
-                    date_str: existing.get("date_str"),
-                    max_attempts: existing.get("max_attempts"),
-                    pos: existing.get("pos"),
-                    guesses: parsedGuesses,
-                    finished: existing.get("finished"),
-                    won: existing.get("won")
-                };
-                if (existing.get("finished")) {
-                    res.secret = existing.get("secret");
-                    res.definition_url = engine.getDefinitionUrl(existing.get("secret"));
-                }
-                return e.json(200, res);
-            }
-        } catch (err) {
-            // Not found, proceed to create new game
-        }
-    }
-
-    const targetObj = engine.pickTarget(length, category, mode, dateStr);
+    const targetObj = engine.pickRandomTarget(length, category);
     const sessionId = $security.randomString(24);
 
     const gamesCol = e.app.findCollectionByNameOrId("games");
@@ -70,8 +96,8 @@ routerAdd("POST", "/api/game/new", (e) => {
     if (e.auth) {
         rec.set("user", e.auth.id);
     }
-    rec.set("mode", mode);
-    rec.set("date_str", dateStr);
+    rec.set("mode", "random");
+    rec.set("date_str", today);
     rec.set("length", length);
     rec.set("category", category);
     rec.set("secret", targetObj.w);
@@ -81,21 +107,75 @@ routerAdd("POST", "/api/game/new", (e) => {
     rec.set("max_attempts", 6);
     rec.set("won", false);
     rec.set("finished", false);
-
     e.app.save(rec);
 
     return e.json(200, {
         session_id: sessionId,
         length: length,
         category: category,
-        mode: mode,
-        date_str: dateStr,
+        mode: "random",
+        date_str: today,
         max_attempts: 6,
         pos: targetObj.pos,
         guesses: [],
         finished: false,
-        won: false
+        won: false,
+        day_changed: false
     });
+});
+
+// Give up the in-progress daily game from a previous day and start today's.
+// The abandoned game is recorded as a loss (finished, won=false).
+routerAdd("POST", "/api/game/daily/abandon", (e) => {
+    const engine = require(`${__hooks}/game_engine.js`);
+    const body = e.requestInfo().body || {};
+    const today = engine.getFinlandDateStr();
+
+    const sessionId = (body.session_id || "").trim();
+    if (!sessionId) {
+        return e.json(400, { error: "session_id is required." });
+    }
+
+    let rec;
+    try {
+        rec = e.app.findFirstRecordByFilter("games", "session_id = {:sid} && mode = 'daily'", { sid: sessionId });
+    } catch (err) {
+        return e.json(404, { error: "Pelisessiota ei löytynyt." });
+    }
+
+    if (rec.get("finished")) {
+        return e.json(400, { error: "Peli on jo päättynyt." });
+    }
+
+    // Ownership check for authenticated users.
+    if (e.auth) {
+        const gameUser = rec.get("user");
+        if (gameUser && gameUser !== e.auth.id) {
+            return e.json(403, { error: "Ei oikeutta tähän peliin." });
+        }
+    }
+
+    // Record the abandoned game as a loss.
+    rec.set("finished", true);
+    rec.set("won", false);
+    e.app.save(rec);
+
+    // Return today's daily game if one already exists (authed), else create it.
+    if (e.auth) {
+        try {
+            const todayGame = e.app.findFirstRecordByFilter(
+                "games",
+                "user = {:uid} && mode = 'daily' && date_str = {:d}",
+                { uid: e.auth.id, d: today }
+            );
+            return e.json(200, engine.serializeGame(todayGame, false));
+        } catch (err) {
+            // none yet
+        }
+    }
+
+    const targetObj = engine.pickDailyTarget(today);
+    return e.json(200, engine.createDailyGame(e.app, e.auth ? e.auth.id : null, today, targetObj));
 });
 
 routerAdd("POST", "/api/game/guess", (e) => {
