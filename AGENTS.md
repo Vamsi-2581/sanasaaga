@@ -17,11 +17,16 @@ No linter exists. There are smoke tests for the game engine only (`backend/test/
 ## Backend (`backend/pb_hooks/`)
 
 - Goja JSVM, **not Node**. CommonJS only: `require` / `module.exports`, no `import`.
+- `*.pb.js` files only *register* hooks; their callbacks run in a separate VM where only `require`d modules exist. Put logic in plain `*.js` modules and `require` them **inside** the callback. Top-level declarations in `*.pb.js` are invisible to callbacks and collide across files.
 - Prefer string concatenation over template literals (existing convention).
+- Schema lives in `schema.js` and must be **idempotent**: there are no migrations, so it has to converge both a fresh and an existing `pb_data` on every boot (add missing fields/rules, never assume empty).
+- `games` API rules are locked (`null`). All writes go through hooks via `app.save`; never open a create/update rule on it.
 - `findFirstRecordByFilter` throws when nothing matches — always wrap in try/catch.
 - Register routes with `routerAdd`; read body via `e.requestInfo().body`, query via `e.request.url.query()`.
 - Reuse `serializeGame` / `createDailyGame` and the existing helpers in `game_engine.js` instead of duplicating record creation or response shaping.
 - `DAILY_WORD_SECRET` is required for the daily challenge; never hardcode or log it.
+
+Backend routes are not covered by the node suite — verify schema/route changes against a real PocketBase binary before declaring them done.
 
 ## Frontend (`frontend/src/`)
 

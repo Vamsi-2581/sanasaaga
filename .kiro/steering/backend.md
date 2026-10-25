@@ -7,8 +7,8 @@ fileMatchPattern: 'backend/**'
 The backend is a single PocketBase binary with JS hooks executed in the Goja JSVM (not Node). Match the patterns in `backend/pb_hooks/`.
 
 ## File conventions
-- `*.pb.js` — hook files, auto-loaded by PocketBase on startup (e.g. `init.pb.js`, `game.pb.js`, `users.pb.js`).
-- Plain `*.js` — modules loaded via `require(\`${__hooks}/file.js\`)` (e.g. `game_engine.js`, `words.js`). Export with `module.exports = { ... }`.
+- `*.pb.js` — hook registration only, auto-loaded by PocketBase on startup (`init.pb.js`, `game.pb.js`, `users.pb.js`). Their callbacks run in a separate VM, so all logic must live in required modules and be `require`-d *inside* the callback; top-level declarations there are invisible to callbacks and collide across files.
+- Plain `*.js` — modules loaded via `require(\`${__hooks}/file.js\`)` (e.g. `game_engine.js`, `schema.js`, `gamer_tag.js`, `words.js`). Export with `module.exports = { ... }`.
 - Start every file with a header comment: `// backend/pb_hooks/<file>.js` + a one-line description.
 
 ## JSVM constraints (Goja)
@@ -44,11 +44,14 @@ The backend is a single PocketBase binary with JS hooks executed in the Goja JSV
 - `/api/game/daily/abandon`: marks an in-progress previous-day daily game as `finished` + `won = false` (a loss), then returns (or creates) today's game. Authed users must own the game; guests act by `session_id`.
 - Free play ignores all of the above (always a fresh random game with the client's length/category).
 
-## Schema (`init.pb.js`)
-- Collections are created idempotently on bootstrap if missing: `games`, `friendships`.
+## Schema (`init.pb.js` -> `schema.js`)
+- There are no migrations (the container ships only `pb_hooks`), so schema setup runs on every boot and must converge both a fresh and an existing `pb_data`: create collections if missing, add any missing field/rule, never assume an empty database. A second boot must be a no-op.
+- Collections: `games`, `friendships`. They are built by hand, so the `created`/`updated` autodate fields have to be added explicitly (without them any `-created` sort fails).
 - `games` fields: `session_id`, `user` (relation), `mode`, `date_str` (`YYYY-MM-DD`), `length` (4–8), `category` (`all|substantiivi|adjektiivi|verbi`), `secret`, `pos`, `guesses_json` (serialized array of `{guess, evaluation}`), `attempts`, `max_attempts` (6), `won`, `finished`.
-- Access rules let users see only their own games: `@request.auth.id != '' && user.id = @request.auth.id`.
+- Access rules let users see only their own games: `@request.auth.id != '' && user.id = @request.auth.id`. Create/update/delete are locked (`null` = superusers only) — all writes go through the hooks via `app.save`; an empty string rule would mean "anyone".
 - Add SQL indexes: unique on `session_id`, and on `(user, date_str, mode)`.
 
-## Privacy hook (`users.pb.js`)
-- On `users` create: set `emailVisibility = false`, `name = ""`, and assign an animal gamer tag (`Kettu`, `Ilves`, `Karhu`, `Susi`, `Ahma`, `Norppa`, `Hirvi`, `Metso`, `Kuukkeli`, `Siili`, `Saukko`, `Pöllö` + 3-digit number) if username is empty or equals the email prefix.
+## Privacy and accounts (`users.pb.js`, `gamer_tag.js`)
+- Accounts are created through Google OAuth2 only. The users `createRule` must stay open because PocketBase checks it for OAuth2 signup, so plain email/password creates are rejected in the create hook instead (`passwordAuth` is also disabled as defence in depth).
+- On `users` create: set `emailVisibility = false`, `name = ""`, and assign an animal gamer tag (`Kettu`, `Ilves`, `Karhu`, `Susi`, `Ahma`, `Norppa`, `Hirvi`, `Metso`, `Kuukkeli`, `Siili`, `Saukko`, `Pöllö` + 3-digit number) if `username` is empty or equals the email prefix.
+- The `username` field is added by `schema.js`; existing accounts are backfilled there when the field is first created.
