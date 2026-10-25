@@ -35,9 +35,25 @@ jobs:
         working-directory: ./frontend
         run: npm run build
 
+  validate-backend:
+    name: Test Backend Engine
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Pure node:test suite, no dependencies to install.
+      - name: Run game engine smoke tests
+        run: node --test backend/test/
+
   build-and-publish:
     name: Build & Publish Containers (GHCR)
-    needs: validate-frontend
+    needs: [validate-frontend, validate-backend]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
