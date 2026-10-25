@@ -330,9 +330,11 @@
             addToast(`Peli päättyi! Sana oli: ${secret.toUpperCase()}`, 3500);
           }
 
-          if (!user) {
+          // Stats are daily-only (the server aggregates the same way); free play
+          // is unlimited and would inflate streaks.
+          if (!user && mode === 'daily') {
             saveLocalStats(res.is_win, updatedGuesses.length);
-          } else {
+          } else if (user) {
             fetchServerStats();
           }
 
