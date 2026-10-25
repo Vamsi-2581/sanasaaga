@@ -43,6 +43,22 @@ Backend routes are not covered by the node suite — verify schema/route changes
 - **Low footprint.** No heavy dependencies. Prefer zero-dependency solutions.
 - **Decoupled API.** The backend stays plain REST/JSON; do not add direct collection access from the frontend beyond what hooks already allow.
 
+## Commit attribution
+
+Every commit produced by an agent must identify its harness in a git trailer, after the body and separated by a blank line:
+
+```
+Assisted-by: <harness> (<model>)
+```
+
+- Read the model from the environment, never from memory — models misreport their own version. In pi: `$PI_MODEL` (and `$PI_PROVIDER` if the model name is ambiguous).
+- pi → `Assisted-by: pi (deepseek-flash)`.
+- Other harnesses → the tool name plus whatever model identifier it actually exposes (`Assisted-by: Claude Code (claude-sonnet-4-5)`).
+- Unknown model → name the harness only (`Assisted-by: pi`). Do not invent a version or provider.
+- One trailer per commit. If the harness already appends its own, do not duplicate it.
+- This is disclosure, not authorship: keep the human author, and do not add `Co-authored-by:` for yourself.
+- CI/automation commits (renovate, release bots) are exempt.
+
 ## Vocabulary
 
 `python3 scripts/prepare_words.py` regenerates `data/words.json` from Kotus/Voikko sources. It is slow and the output is large — only run it when the task is about the dictionary.
