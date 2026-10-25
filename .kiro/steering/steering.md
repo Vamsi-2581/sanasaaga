@@ -18,7 +18,7 @@ Run from the workspace root unless noted.
 - Install deps: `cd frontend && npm install` (or `npm ci` for CI/reproducible installs)
 - Dev server: `cd frontend && npm run dev` → http://localhost:5173 (proxies `/api`, `/_`, `/health` to PocketBase on :8090)
 - Build: `cd frontend && npm run build` (outputs `frontend/dist/`)
-- There is **no test runner and no linter** configured; CI validates by running `npm run build`. Match existing code style when editing.
+- There is **no linter** configured and CI validates the frontend by running `npm run build`. Engine smoke tests live in `backend/test/` (`node --test backend/test/`). Match existing code style when editing.
 
 ### Backend (`backend/`)
 - Run locally (needs the `pocketbase` binary in `backend/`): `cd backend && DAILY_WORD_SECRET=... ./pocketbase serve --http=127.0.0.1:8090`
