@@ -48,8 +48,11 @@ jobs:
           node-version: 22
 
       # Pure node:test suite, no dependencies to install.
+      # Use an explicit glob (quoted so Node, not the shell, expands it) rather
+      # than a bare directory path: `node --test <dir>` resolution is not stable
+      # across Node 22.x and fails with MODULE_NOT_FOUND on some patch releases.
       - name: Run game engine smoke tests
-        run: node --test backend/test/
+        run: node --test "backend/test/**/*.test.mjs"
 
   build-and-publish:
     name: Build & Publish Containers (GHCR)
