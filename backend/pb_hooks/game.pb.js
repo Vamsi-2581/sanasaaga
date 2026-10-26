@@ -1,10 +1,10 @@
 // backend/pb_hooks/game.pb.js
-// Sanakuutio Game API endpoints
+// Sanasaaga Game API endpoints
 
 routerAdd("GET", "/health", (e) => {
     return e.json(200, {
         status: "ok",
-        app: "Sanakuutio",
+        app: "Sanasaaga",
         version: "2.1.0-pocketbase"
     });
 });

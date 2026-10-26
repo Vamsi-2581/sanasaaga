@@ -1,6 +1,6 @@
-# 🌿 Sanakuutio - Finnish Wordle
+# 🌿 Sanasaaga - Finnish Wordle
 
-**Sanakuutio** is a modern Finnish Wordle word game.
+**Sanasaaga** is a modern Finnish Wordle word game.
 The project is built as a decoupled microservices architecture:
 * **Frontend**: Svelte 5 + Vite (packaged into an ultra-lightweight `nginx:alpine` container, ~13 MB RAM).
 * **Backend**: PocketBase (Go + embedded SQLite + OAuth2 + game engine as JS hooks, ~70 MB RAM).
@@ -84,7 +84,7 @@ The Vite development server opens at `http://localhost:5173` and automatically p
 ## 📂 Project Structure
 
 ```
-sanakuutio/
+sanasaaga/
 ├── backend/
 │   ├── Containerfile          # Alpine + PocketBase container definition (~22 MB)
 │   ├── pb_hooks/

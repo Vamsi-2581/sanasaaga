@@ -1,5 +1,5 @@
 // backend/test/game_engine.test.mjs
-// Smoke tests for the Sanakuutio Wordle engine, run with the Node test runner:
+// Smoke tests for the Sanasaaga Wordle engine, run with the Node test runner:
 //   node --test backend/test/
 // The hooks run in PocketBase's Goja JSVM; here we emulate the two globals the
 // engine uses ($os, $security) and let CommonJS require resolve words.js.

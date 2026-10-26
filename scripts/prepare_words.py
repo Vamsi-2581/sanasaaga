@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Prepares the Finnish word dataset for Sanakuutio.
+Prepares the Finnish word dataset for Sanasaaga.
 Combines Kotus (Institute for the Languages of Finland),
 Joukahainen (Voikko morphology database), and Finnish word frequency lists.
 """
@@ -24,7 +24,7 @@ def fetch_data(url: str, cache_file: Path) -> bytes:
         print(f"Loading cached {cache_file.name}...")
         return cache_file.read_bytes()
     print(f"Downloading {url}...")
-    req = urllib.request.Request(url, headers={"User-Agent": "Sanakuutio/1.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "Sanasaaga/1.0"})
     with urllib.request.urlopen(req) as resp:
         content = resp.read()
     cache_file.write_bytes(content)

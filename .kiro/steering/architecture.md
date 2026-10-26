@@ -1,9 +1,9 @@
 ---
 inclusion: auto
 name: architecture
-description: Sanakuutio system architecture, network topology, API spec, data model, and deployment/reverse-proxy setup.
+description: Sanasaaga system architecture, network topology, API spec, data model, and deployment/reverse-proxy setup.
 ---
-# Sanakuutio — System Architecture
+# Sanasaaga — System Architecture
 
 Concise reference for architecture, data model, and deployment questions. Full details live in `ARCHITECTURE.md`.
 

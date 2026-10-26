@@ -1,12 +1,12 @@
-# 🏛 Sanakuutio - System Architecture
+# 🏛 Sanasaaga - System Architecture
 
-This document describes the system architecture, component boundaries, data models, network topology, and privacy design of **Sanakuutio**.
+This document describes the system architecture, component boundaries, data models, network topology, and privacy design of **Sanasaaga**.
 
 ---
 
 ## 1. Overview and Core Principles
 
-Sanakuutio is a Finnish Wordle-style word game designed for lightweight, reliable hosting on container-based environments and home servers.
+Sanasaaga is a Finnish Wordle-style word game designed for lightweight, reliable hosting on container-based environments and home servers.
 
 ### Core Architectural Principles:
 1. **Ultra-Low Resource Footprint**: The entire stack (frontend + backend + database) consumes less than **90 MB of RAM**.
@@ -157,7 +157,7 @@ In production, an SSL-terminating reverse proxy (such as **Caddy** or **Nginx**)
 Caddy automatically provisions and renews Let's Encrypt SSL/TLS certificates:
 
 ```caddy
-{$DOMAIN_NAME:sanakuutio.example.com} {
+{$DOMAIN_NAME:sanasaaga.example.com} {
     # Route API and Admin Dashboard to PocketBase
     handle /api/* {
         reverse_proxy backend:8090
@@ -180,7 +180,7 @@ Caddy automatically provisions and renews Let's Encrypt SSL/TLS certificates:
 Automated continuous deployment workflow:
 1. **GitHub Actions Workflow**:
    * Pushes to `main` trigger a container build job.
-   * Container images are published to GitHub Container Registry (`ghcr.io/username/sanakuutio-frontend:latest` and `backend:latest`).
+   * Container images are published to GitHub Container Registry (`ghcr.io/username/sanasaaga-frontend:latest` and `backend:latest`).
 2. **Production Deployment**:
    * **Self-hosted GitHub Runner (Recommended)**: A runner inside the production VM connects outbound to GitHub, pulls the latest images from `ghcr.io`, and executes `podman-compose -f compose.prod.yaml up -d`.
    * **Alternative (Watchtower)**: A background daemon monitoring image tags for automated redeployment.

@@ -1,7 +1,7 @@
 ---
 inclusion: always
 ---
-# Sanakuutio — Product & Design Principles
+# Sanasaaga — Product & Design Principles
 
 ## What it is
 A Finnish-language Wordle clone. Players guess a hidden Finnish word (4–8 letters, default 5) in up to 6 tries. Tiles color as `correct` (green), `present` (yellow), or `absent` (gray).

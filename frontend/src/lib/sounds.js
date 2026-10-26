@@ -1,4 +1,4 @@
-// Web Audio API Synthesizer for Sanakuutio (zero external asset requests)
+// Web Audio API Synthesizer for Sanasaaga (zero external asset requests)
 
 class SoundEffects {
   constructor() {

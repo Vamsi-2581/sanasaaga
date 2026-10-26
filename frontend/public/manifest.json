@@ -1,6 +1,6 @@
 {
-  "name": "Sanakuutio - Suomenkielinen Wordle",
-  "short_name": "Sanakuutio",
+  "name": "Sanasaaga - Suomenkielinen Wordle",
+  "short_name": "Sanasaaga",
   "description": "Suomenkielinen Wordle-sanapeli",
   "start_url": "/",
   "display": "standalone",

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Sanakuutio — Finnish Wordle clone. Svelte 5 SPA (`frontend/`) + PocketBase with JS hooks (`backend/`), one container each.
+Sanasaaga — Finnish Wordle clone. Svelte 5 SPA (`frontend/`) + PocketBase with JS hooks (`backend/`), one container each.
 
 Deep reference: `.kiro/steering/*.md` (conventions), `ARCHITECTURE.md` (design, API, data model), `README.md` (features). Read them when the task touches those areas; they are specs, not optional reading.
 

@@ -11,7 +11,7 @@ services:
     volumes:
       - pb_data:/pb/pb_data
     networks:
-      - sanakuutio-net
+      - sanasaaga-net
 
   frontend:
     build:
@@ -22,10 +22,10 @@ services:
     depends_on:
       - backend
     networks:
-      - sanakuutio-net
+      - sanasaaga-net
 
 volumes:
   pb_data:
 
 networks:
-  sanakuutio-net:
+  sanasaaga-net:

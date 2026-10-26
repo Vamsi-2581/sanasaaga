@@ -1,9 +1,9 @@
 ---
 inclusion: always
 ---
-# Sanakuutio — Project Steering
+# Sanasaaga — Project Steering
 
-Sanakuutio is a Finnish Wordle-style word game. It is a decoupled microservices stack: a Svelte 5 SPA frontend and a PocketBase (Go + embedded SQLite) backend, each in its own container. The whole stack runs in under 90 MB RAM.
+Sanasaaga is a Finnish Wordle-style word game. It is a decoupled microservices stack: a Svelte 5 SPA frontend and a PocketBase (Go + embedded SQLite) backend, each in its own container. The whole stack runs in under 90 MB RAM.
 
 ## Tech Stack
 - **Frontend**: Svelte 5 (Runes) + Vite 8, PocketBase JS SDK, served by `nginx:alpine`.

@@ -79,13 +79,13 @@
     document.documentElement.setAttribute('data-theme', settings.theme);
     document.documentElement.setAttribute('data-contrast', settings.contrast);
     try {
-      localStorage.setItem('sanakuutio_settings', JSON.stringify(settings));
+      localStorage.setItem('sanasaaga_settings', JSON.stringify(settings));
     } catch (e) {}
   }
 
   function loadLocalSettings() {
     try {
-      const saved = localStorage.getItem('sanakuutio_settings');
+      const saved = localStorage.getItem('sanasaaga_settings');
       if (saved) {
         applySettings({ ...settings, ...JSON.parse(saved) });
       } else {
@@ -98,7 +98,7 @@
 
   function loadLocalStats() {
     try {
-      const saved = localStorage.getItem('sanakuutio_stats');
+      const saved = localStorage.getItem('sanasaaga_stats');
       if (saved) {
         stats = { ...stats, ...JSON.parse(saved) };
       }
@@ -121,7 +121,7 @@
     next.win_rate = Math.round((next.wins / next.played) * 100);
     stats = next;
     try {
-      localStorage.setItem('sanakuutio_stats', JSON.stringify(stats));
+      localStorage.setItem('sanasaaga_stats', JSON.stringify(stats));
     } catch (e) {}
   }
 
@@ -131,15 +131,15 @@
   // game instead of starting a new one. Cleared when the game ends or is given up.
   function loadDailySessionId() {
     try {
-      return localStorage.getItem('sanakuutio_daily_session') || null;
+      return localStorage.getItem('sanasaaga_daily_session') || null;
     } catch (e) {
       return null;
     }
   }
   function saveDailySessionId(id) {
     try {
-      if (id) localStorage.setItem('sanakuutio_daily_session', id);
-      else localStorage.removeItem('sanakuutio_daily_session');
+      if (id) localStorage.setItem('sanasaaga_daily_session', id);
+      else localStorage.removeItem('sanasaaga_daily_session');
     } catch (e) {}
   }
 
@@ -351,7 +351,7 @@
   }
 
   function shareResult() {
-    let text = `🌿 Sanakuutio (${mode === 'daily' ? 'Päivän sana' : 'Vapaa'}) ${length}k\n`;
+    let text = `🌿 Sanasaaga (${mode === 'daily' ? 'Päivän sana' : 'Vapaa'}) ${length}k\n`;
     text += `${isWin ? guesses.length : 'X'}/6\n\n`;
 
     for (const g of guesses) {

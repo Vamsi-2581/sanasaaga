@@ -3,7 +3,7 @@ set -e
 
 PORT="${PORT:-8000}"
 
-echo "🌿 Sanakuutio - Finnish Wordle (Podman)"
+echo "🌿 Sanasaaga - Finnish Wordle (Podman)"
 echo "========================================"
 
 if command -v podman-compose >/dev/null 2>&1; then
@@ -19,7 +19,7 @@ echo "Starting services with Podman ($COMPOSE_CMD)..."
 $COMPOSE_CMD up -d --build
 
 echo ""
-echo "✅ Sanakuutio is running with Podman!"
+echo "✅ Sanasaaga is running with Podman!"
 echo "👉 Game:        http://localhost:${PORT}"
 echo "👉 PocketBase:  http://localhost:${PORT}/_/"
 echo ""

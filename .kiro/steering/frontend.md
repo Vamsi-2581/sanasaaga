@@ -25,8 +25,8 @@ Svelte 5 SPA bundled with Vite. Uses Runes exclusively — no Svelte 4 reactivit
 
 ## State & persistence (`App.svelte`)
 - `App.svelte` is the single orchestrator: holds game state, settings, stats, and modal open-flags, then passes props down to components. Keep components presentational; put logic in `App.svelte` and `lib/*.js`.
-- Settings persist to `localStorage` under `sanakuutio_settings`; guest stats under `sanakuutio_stats` (daily games only, matching the server aggregate). Wrap all `localStorage` access in try/catch.
-- An in-progress daily `session_id` is stored under `sanakuutio_daily_session` so reloads (and the Helsinki midnight rollover) resume the same game; it is cleared on game-over or give-up. The daily length is random and comes from the server — always set `length` from the `newGame`/`abandonDaily` response, never from the client pills (which are hidden in daily mode).
+- Settings persist to `localStorage` under `sanasaaga_settings`; guest stats under `sanasaaga_stats` (daily games only, matching the server aggregate). Wrap all `localStorage` access in try/catch.
+- An in-progress daily `session_id` is stored under `sanasaaga_daily_session` so reloads (and the Helsinki midnight rollover) resume the same game; it is cleared on game-over or give-up. The daily length is random and comes from the server — always set `length` from the `newGame`/`abandonDaily` response, never from the client pills (which are hidden in daily mode).
 - Keyboard input is handled by a global `keydown` listener (added in `onMount`, removed in `onDestroy`); ignore input while a modal is open or when Ctrl/Meta/Alt modifiers are held.
 - Only `a-zåäö` letters are accepted — the Finnish alphabet includes Å, Ä, Ö.
 

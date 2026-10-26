@@ -21,7 +21,7 @@
 
   <div class="logo">
     <span class="logo-leaf">🌿</span>
-    <span>SANAKUUTIO</span>
+    <span>SANASAAGA</span>
   </div>
 
   <div class="header-side right">

@@ -1,5 +1,5 @@
 // backend/pb_hooks/game_engine.js
-// Sanakuutio Finnish Wordle engine: daily target selection, free-play selection,
+// Sanasaaga Finnish Wordle engine: daily target selection, free-play selection,
 // guess validation and the two-pass letter coloring algorithm.
 const words = require(`${__hooks}/words.js`);
 
