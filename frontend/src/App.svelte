@@ -433,14 +433,76 @@
 
     text += '\nhttps://' + window.location.host;
 
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(() => {
+    shareOrCopy(text);
+  }
+
+  async function shareOrCopy(text) {
+    // Preferred on mobile: native share sheet via Web Share API.
+    // Requires a secure context and a user gesture (this runs from a click).
+    if (navigator.share && window.isSecureContext) {
+      try {
+        await navigator.share({ title: 'Sanasaaga', text });
+        return;
+      } catch (err) {
+        // AbortError means the user dismissed the share sheet — don't fall back.
+        if (err && err.name === 'AbortError') return;
+        // Any other error: fall through to clipboard copy.
+      }
+    }
+
+    copyToClipboard(text);
+  }
+
+  async function copyToClipboard(text) {
+    // Preferred: async Clipboard API (requires secure context: HTTPS or localhost)
+    if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
         addToast('Kopioitu leikepöydälle! 📋');
-      }).catch(() => {
-        addToast('Kopiointi epäonnistui');
-      });
-    } else {
-      addToast('Leikepöytä ei ole tuettu tällä selaimella');
+        return;
+      } catch (err) {
+        // Fall through to legacy method below
+      }
+    }
+
+    // Fallback: legacy execCommand('copy') via a temporary textarea.
+    // Works on non-secure contexts (plain HTTP) and older browsers.
+    if (fallbackCopy(text)) {
+      addToast('Kopioitu leikepöydälle! 📋');
+      return;
+    }
+
+    addToast('Kopiointi epäonnistui');
+  }
+
+  function fallbackCopy(text) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      // Avoid scrolling to bottom / visual flash
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '0';
+      ta.style.left = '0';
+      ta.style.width = '1px';
+      ta.style.height = '1px';
+      ta.style.padding = '0';
+      ta.style.border = 'none';
+      ta.style.outline = 'none';
+      ta.style.boxShadow = 'none';
+      ta.style.background = 'transparent';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+
+      ta.focus();
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch (err) {
+      return false;
     }
   }
 
