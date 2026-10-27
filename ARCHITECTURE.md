@@ -84,6 +84,7 @@ A single-binary **PocketBase** application (Go + Goja JSVM runtime hooks):
   * Official two-pass letter coloring algorithm (`correct`, `present`, `absent`).
   * Daily word selection: one word per Helsinki day, identical for everyone. Both the length (4–8) and the word class are random, drawn across the whole dictionary. Seed = `DAILY_WORD_SECRET` (env var) + `:` + Helsinki date → `SHA-256`; the first 8 hex chars select the length, the next 8 hex chars index into the top-600 most-frequent words of that length. The secret is read via `$os.getenv` and never leaves the server, so the daily word can't be reconstructed from the dictionary alone.
   * Free play: random pick from the top 70% most-frequent words of the chosen length/category. Each word length (4–8) is an independent game slot that persists until finished, so a player can keep up to five free games going (one per length) plus the daily, switching between them without losing progress. A reset action discards the current unfinished free game of a length and starts a new one.
+  * A finished daily game stays resumable (keeps showing its result and word) until the Helsinki date rolls over — it never re-rolls on completion. Only a midnight rollover (or giving up a previous day's unfinished game) produces a new daily word.
   * Helsinki date is derived from the UTC clock with EU DST handling (EET=UTC+2 / EEST=UTC+3), so the daily rollover is correct regardless of the container's timezone.
 
 ---

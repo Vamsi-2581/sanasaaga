@@ -40,7 +40,7 @@ The backend is a single PocketBase binary with JS hooks executed in the Goja JSV
 
 ## Daily challenge lifecycle (midnight rollover)
 - The daily word is tied to a Helsinki date (`date_str`). The client never sends the date — the server computes it with `getFinlandDateStr()`.
-- `/api/game/new` (daily): if the client sends `session_id`, resume that exact game (guests track it in `localStorage`). Else for authed users, resume today's game, then any unfinished daily game from an earlier date (returned with `day_changed: true`). Otherwise create today's game. Daily mode ignores the client's `length`/`category` — both are random.
+- `/api/game/new` (daily): if the client sends `session_id`, resume that exact game — **today's game resumes whether finished or not** (a completed daily must keep showing its result until midnight), while an *earlier* day's game resumes only while still unfinished (`day_changed: true`); a finished earlier game falls through to create today's. Else for authed users, resume today's game (finished or not), then any unfinished daily from an earlier date. Otherwise create today's. Daily ignores the client's `length`/`category` — both are random.
 - `/api/game/daily/abandon`: marks an in-progress previous-day daily game as `finished` + `won = false` (a loss), then returns (or creates) today's game. Authed users must own the game; guests act by `session_id`.
 
 ## Free-play lifecycle (one game per length)

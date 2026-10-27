@@ -32,10 +32,17 @@ routerAdd("POST", "/api/game/new", (e) => {
                     "session_id = {:sid} && mode = 'daily'",
                     { sid: body.session_id }
                 );
-                if (!rec.get("finished")) {
-                    // Resume only the owner's game, or an unowned (guest) game.
-                    if (engine.canAccessGame(rec.get("user"), e.auth ? e.auth.id : null)) {
-                        return e.json(200, engine.serializeGame(rec, rec.get("date_str") !== today));
+                // Resume only the owner's game, or an unowned (guest) game.
+                if (engine.canAccessGame(rec.get("user"), e.auth ? e.auth.id : null)) {
+                    const isToday = rec.get("date_str") === today;
+                    // Today's game always resumes, finished or not: a completed
+                    // daily must keep showing its result (same word) until the
+                    // Helsinki date rolls over at midnight. An earlier day's game
+                    // resumes only while still unfinished (the finish-through-
+                    // midnight / give-up case); a finished old game falls through
+                    // so today's new daily is created.
+                    if (isToday || !rec.get("finished")) {
+                        return e.json(200, engine.serializeGame(rec, !isToday));
                     }
                 }
             } catch (err) {

@@ -25,6 +25,10 @@
 
   // Game Settings & State
   let length = $state(5);
+  // The free-play length the player last chose. Daily mode overwrites `length`
+  // with its server-chosen random length, so this remembers the free selection
+  // to restore when switching back to free play.
+  let freeLength = $state(5);
   let category = $state('all');
   let mode = $state('daily'); // 'daily' | 'random'
   let sessionId = $state('');
@@ -172,6 +176,20 @@
     } catch (e) {}
   }
 
+  // Remember the player's chosen free-play length across daily detours and reloads.
+  function loadFreeLength() {
+    try {
+      const v = Number(localStorage.getItem('sanasaaga_free_length'));
+      if (v >= 4 && v <= 8) return v;
+    } catch (e) {}
+    return 5;
+  }
+  function saveFreeLength(len) {
+    try {
+      localStorage.setItem('sanasaaga_free_length', String(len));
+    } catch (e) {}
+  }
+
   async function fetchServerStats() {
     if (user) {
       const serverStats = await getStats();
@@ -212,9 +230,18 @@
     keyStatuses = {};
     updateKeyStatuses(guesses);
 
-    // Track the slot's session only while its game is in progress; clear it on
-    // game-over so a finished game isn't resumed next time.
-    setSlotSessionId(gameData.mode, gameData.length, isGameOver ? null : sessionId);
+    // Slot persistence:
+    //  - Daily: keep the session even when finished, so re-entering daily (or
+    //    reloading) resumes today's completed game and shows the same word/
+    //    result until the Helsinki midnight rollover. The server stops resuming
+    //    it once the date changes.
+    //  - Free play: clear on game-over so a finished game isn't resumed and the
+    //    next visit to that length deals a new word.
+    if (gameData.mode === 'daily') {
+      setSlotSessionId('daily', gameData.length, sessionId);
+    } else {
+      setSlotSessionId(gameData.mode, gameData.length, isGameOver ? null : sessionId);
+    }
   }
 
   async function initGame() {
@@ -259,9 +286,17 @@
   }
 
   // Free play only: discard the current unfinished game of this length and
-  // start a fresh one with a new word.
+  // start a fresh one with a new word. Confirm first when there is in-progress
+  // work to lose (an unfinished game with at least one guess).
   async function resetRandomGame() {
     if (mode !== 'random' || isSubmitting) return;
+
+    const hasProgress = !isGameOver && guesses.length > 0;
+    if (hasProgress && typeof window !== 'undefined' && typeof window.confirm === 'function') {
+      const ok = window.confirm('Aloitetaanko uusi peli? Nykyinen kesken oleva peli hylätään.');
+      if (!ok) return;
+    }
+
     isSubmitting = true;
     try {
       const gameData = await pbResetRandom({ length, category, sessionId });
@@ -347,9 +382,12 @@
         secret = res.secret || '';
         definitionUrl = res.definition_url || '';
 
-        // The game is over, so its slot is no longer resumable. Clear it for
-        // both daily and free play (the free slot is keyed by this length).
-        setSlotSessionId(mode, length, null);
+        // Free play: the finished game's slot is no longer resumable, so clear
+        // it (the next visit to this length deals a new word). Daily keeps its
+        // slot so the completed result stays visible until the midnight rollover.
+        if (mode === 'random') {
+          setSlotSessionId('random', length, null);
+        }
 
         setTimeout(() => {
           if (res.is_win) {
@@ -446,6 +484,12 @@
   onMount(() => {
     loadLocalSettings();
     loadLocalStats();
+    freeLength = loadFreeLength();
+    // Default mode is daily, so free play uses the remembered length when first
+    // opened; in case the default ever changes to free, seed length from it too.
+    if (mode === 'random') {
+      length = freeLength;
+    }
     if (user) {
       fetchServerStats();
     }
@@ -484,7 +528,7 @@
           {#each [4, 5, 6, 7, 8] as len}
             <button
               class="pill-btn {length === len ? 'active' : ''}"
-              onclick={() => { length = len; initGame(); }}
+              onclick={() => { length = len; freeLength = len; saveFreeLength(len); initGame(); }}
             >
               {len}
             </button>
@@ -515,7 +559,7 @@
         </button>
         <button
           class="pill-btn {mode === 'random' ? 'active' : ''}"
-          onclick={() => { mode = 'random'; initGame(); }}
+          onclick={() => { mode = 'random'; length = freeLength; initGame(); }}
         >
           Vapaa peli
         </button>
