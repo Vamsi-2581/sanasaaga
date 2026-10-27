@@ -315,7 +315,9 @@ body {
   grid-template-rows: repeat(6, 1fr);
   gap: 5px;
   height: 100%;
-  max-height: 380px;
+  /* Tile size is driven by board height (tile ≈ height / 6). A lower cap makes
+     every tile smaller and leaves more breathing room on the page. */
+  max-height: 320px;
   /* aspect-ratio (length / 6) is set inline per word length in Board.svelte.
      Constrain by BOTH height and width so wide boards (7-8 letters) shrink to
      fit narrow screens instead of overflowing and clipping the edge columns. */
@@ -337,7 +339,7 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(0.85rem, 3.2vw, 1.8rem);
+  font-size: clamp(1rem, 3.6vw, 1.8rem);
   font-weight: 800;
   text-transform: uppercase;
   color: var(--text-color);
