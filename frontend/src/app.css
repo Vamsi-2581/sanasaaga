@@ -317,7 +317,7 @@ body {
   height: 100%;
   /* Tile size is driven by board height (tile ≈ height / 6). A lower cap makes
      every tile smaller and leaves more breathing room on the page. */
-  max-height: 320px;
+  max-height: 260px;
   /* aspect-ratio (length / 6) is set inline per word length in Board.svelte.
      Constrain by BOTH height and width so wide boards (7-8 letters) shrink to
      fit narrow screens instead of overflowing and clipping the edge columns. */
