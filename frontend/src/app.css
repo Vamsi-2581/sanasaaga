@@ -634,3 +634,38 @@ body {
     letter-spacing: 0.04em;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Landscape / short viewports (phones rotated sideways)
+   The portrait layout is a fixed 100dvh column (header + board + keyboard). In
+   landscape the viewport is too short for all three, so the fixed-height
+   keyboard overlapped the board. Here we let the container grow to its content
+   height and scroll instead, and relax the fixed board/keyboard heights so each
+   keeps a usable size and nothing overlaps. (Installed PWAs are locked to
+   portrait via the manifest; this covers everyone playing in a browser tab.)
+   --------------------------------------------------------------------------- */
+@media (max-height: 600px) and (orientation: landscape) {
+  .app-container {
+    height: auto;
+    min-height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .board-container {
+    /* Don't let the board eat the whole row; give it a sensible slice and let
+       the page scroll for the rest. */
+    flex: 0 0 auto;
+    padding: 6px 0;
+  }
+
+  .board-grid {
+    /* Cap by the short viewport height so tiles stay reasonable in landscape. */
+    max-height: min(260px, 60vh);
+  }
+
+  .keyboard-container {
+    /* Natural height instead of a fixed one, so it can never overlap the board. */
+    height: auto;
+    min-height: 150px;
+  }
+}

@@ -4,6 +4,7 @@
   "description": "Suomenkielinen Wordle-sanapeli",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#121213",
   "theme_color": "#4ade80",
   "icons": [
