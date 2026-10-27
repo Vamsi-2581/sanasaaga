@@ -659,13 +659,19 @@ body {
   }
 
   .board-grid {
-    /* Cap by the short viewport height so tiles stay reasonable in landscape. */
+    /* Give the grid a DEFINITE height in landscape. With the parent now
+       flex:0 0 auto (indefinite height), the base `height: 100%` has nothing to
+       resolve against, which let the grid overrun into the keyboard below.
+       A concrete height fixes the box so the keyboard flows beneath it. */
+    height: min(260px, 60vh);
     max-height: min(260px, 60vh);
   }
 
   .keyboard-container {
-    /* Natural height instead of a fixed one, so it can never overlap the board. */
+    /* Natural height instead of a fixed one, so it can never overlap the board.
+       The top margin guarantees clear separation from the bottom guess row. */
     height: auto;
     min-height: 150px;
+    margin-top: 10px;
   }
 }
