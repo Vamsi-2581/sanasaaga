@@ -142,36 +142,73 @@ In [`backend/pb_hooks/users.pb.js`](backend/pb_hooks/users.pb.js), the user regi
 
 ## 6. Production Deployment & Reverse Proxy
 
-In production, an SSL-terminating reverse proxy (such as **Caddy** or **Nginx**) is placed in front of the application to handle automated HTTPS on port 443:
+In production, an SSL-terminating reverse proxy (typically **Caddy**) sits in front of the application, handling automated HTTPS on port 443 and forwarding plain HTTP to the stack. The stack has a **single public entry point**: the frontend Nginx container (published as `8000:80`). Nginx itself fans `/api/*`, `/_/*`, and `/health` out to the backend container internally, so the reverse proxy never needs to know about PocketBase (`:8090`) or split routes — it just forwards everything for the host to the frontend.
 
 ```
 [ Player Browser / Mobile Client ]
             │  HTTPS (443)
             ▼
-[ Reverse Proxy (e.g. Caddy / Nginx) ]
-      ├── /api/* & /_/*  ──> Backend Container (PocketBase :8090)
-      └── /              ──> Frontend Container (Nginx :80)
+[ Reverse Proxy (Caddy) ]  ──HTTP──>  Frontend Container (Nginx :80, published :8000)
+                                             ├── /              ──> SPA static assets
+                                             └── /api/*, /_/*, /health ──> Backend (PocketBase :8090)
 ```
 
-### Example Caddyfile Configuration:
-Caddy automatically provisions and renews Let's Encrypt SSL/TLS certificates:
+### 6.1 Co-located Caddy (single machine)
+
+When Caddy runs on the same host as the stack, it can target the published port on localhost:
 
 ```caddy
-{$DOMAIN_NAME:sanasaaga.example.com} {
-    # Route API and Admin Dashboard to PocketBase
-    handle /api/* {
-        reverse_proxy backend:8090
-    }
-    handle /_/* {
-        reverse_proxy backend:8090
-    }
-
-    # Route all other traffic to Frontend SPA
-    handle {
-        reverse_proxy frontend:80
-    }
+sanasaaga.fi {
+    reverse_proxy localhost:8000
 }
 ```
+
+### 6.2 Remote Caddy fronting multiple domains / machines
+
+Caddy can also run on a **separate** machine and route different domains to different backend hosts — useful when one gateway serves several services. Example: a Caddy gateway on the **gaiafm** machine terminates HTTPS for both `gaiafm.org` (local) and `sanasaaga.fi` (on the separate **sanasaaga** machine).
+
+```
+                          ┌──────────────────────────────────────────┐
+  Browser ──HTTPS:443──>  │  gaiafm machine: Caddy                    │
+                          │   ├── gaiafm.org   ──HTTP──> local app     │
+                          │   └── sanasaaga.fi ──HTTP──> SANASAAGA_IP:8000
+                          └──────────────────────────────────────────┘
+                                                      │ HTTP (private link)
+                                                      ▼
+                          sanasaaga machine: frontend container (:8000) ─> backend (:8090)
+```
+
+Caddyfile on the gateway machine (`SANASAAGA_IP` = the sanasaaga machine's address reachable from the gateway):
+
+```caddy
+gaiafm.org {
+    reverse_proxy localhost:PORT        # the local gaiafm app
+}
+
+sanasaaga.fi {
+    # Single entry point: the frontend container on the sanasaaga machine.
+    # Do NOT split /api or /_ here — the frontend Nginx already does that.
+    reverse_proxy SANASAAGA_IP:8000
+}
+```
+
+Caddy automatically provisions and renews Let's Encrypt certificates for both domains (each domain's DNS must point at the gateway machine's public IP).
+
+**Operational requirements for the remote-Caddy setup:**
+1. **Expose the frontend port to the gateway.** The compose files publish `8000:80`, which binds `0.0.0.0:8000` on the sanasaaga machine, so it is reachable on the LAN. Restrict it: allow inbound TCP `8000` **only from the gateway machine's IP**, e.g. `sudo ufw allow from GAIAFM_IP to any port 8000 proto tcp`. Port 8000 carries plain HTTP, so it must never be open to the public internet.
+2. **Secure the HTTP leg.** Traffic from the gateway to the sanasaaga machine is unencrypted. Run it over a trusted private link (WireGuard/VPN or a private VLAN). In this deployment the gaiafm machine can reach the sanasaaga machine (not vice-versa), which fits a one-way private route.
+3. **Forwarded headers.** Caddy's `reverse_proxy` sets `X-Forwarded-Proto: https`, `X-Forwarded-For`, and `X-Forwarded-Host`. The frontend `nginx.conf` already forwards these to PocketBase, so the backend sees the original HTTPS scheme and client IP across both hops. No change needed.
+4. **Set the PocketBase application URL** to the public HTTPS origin (`https://sanasaaga.fi`) so OAuth redirect URLs and emails use the correct scheme/host even though the hop to the backend is HTTP — see §6.3.
+
+### 6.3 Setting the PocketBase application URL
+
+Because HTTPS is terminated at Caddy and the backend is reached over HTTP, PocketBase must be told its public origin so it builds correct `https://sanasaaga.fi/...` OAuth redirect URLs. Set it once via the Admin UI:
+
+1. Open the Admin UI at `https://sanasaaga.fi/_/` (through Caddy) and log in as the superuser.
+2. Go to **Settings → Application**.
+3. Set **Application URL** to `https://sanasaaga.fi` and save.
+
+Also update the Google OAuth provider's authorized redirect URI to `https://sanasaaga.fi/api/oauth2-redirect` (Settings → Auth providers → Google), and register the same URI in the Google Cloud console. If OAuth callbacks ever come back as `http://`, the application URL is wrong or the `X-Forwarded-Proto` header is not reaching PocketBase.
 
 ---
 
