@@ -19,6 +19,26 @@ globalThis.__hooks = hooks;
 globalThis.$os = { getenv: (name) => process.env[name] };
 globalThis.$security = {
     sha256: (str) => createHash('sha256').update(str, 'utf8').digest('hex'),
+    randomString: (n) => 'x'.repeat(n),
+};
+
+// Minimal stand-ins for the PocketBase JSVM globals used when persisting games.
+// `new Record(col)` yields an object with get/set backed by a plain map; the
+// fake app records every save so tests can assert what was written.
+class FakeRecord {
+    constructor() { this._fields = {}; }
+    set(key, value) { this._fields[key] = value; }
+    get(key) { return this._fields[key]; }
+}
+globalThis.Record = FakeRecord;
+
+const makeApp = () => {
+    const saved = [];
+    return {
+        saved,
+        findCollectionByNameOrId: (name) => ({ name }),
+        save: (rec) => { saved.push(rec); },
+    };
 };
 
 const engine = require(path.join(hooks, 'game_engine.js'));
@@ -245,5 +265,76 @@ describe('serializeGame (anti-cheat)', () => {
     test('survives corrupt guesses_json', () => {
         const res = engine.serializeGame(makeRecord({ ...base, guesses_json: 'not json' }));
         assert.deepEqual(res.guesses, []);
+    });
+});
+
+describe('createRandomGame', () => {
+    test('persists a free game record with the given length and category', () => {
+        const app = makeApp();
+        const target = { w: 'talot', pos: 'substantiivi' };
+        engine.createRandomGame(app, 'user1', '2025-06-15', 5, 'substantiivi', target);
+
+        assert.equal(app.saved.length, 1, 'exactly one record saved');
+        const rec = app.saved[0];
+        assert.equal(rec.get('mode'), 'random');
+        assert.equal(rec.get('length'), 5);
+        assert.equal(rec.get('category'), 'substantiivi');
+        assert.equal(rec.get('secret'), 'talot');
+        assert.equal(rec.get('pos'), 'substantiivi');
+        assert.equal(rec.get('user'), 'user1');
+        assert.equal(rec.get('date_str'), '2025-06-15');
+        assert.equal(rec.get('guesses_json'), '[]');
+        assert.equal(rec.get('attempts'), 0);
+        assert.equal(rec.get('max_attempts'), 6);
+        assert.equal(rec.get('finished'), false);
+        assert.equal(rec.get('won'), false);
+        assert.ok(rec.get('session_id'), 'session_id is set');
+    });
+
+    test('guest game stores no user relation', () => {
+        const app = makeApp();
+        engine.createRandomGame(app, null, '2025-06-15', 4, 'all', { w: 'kala', pos: 'substantiivi' });
+        assert.equal(app.saved[0].get('user'), undefined);
+    });
+
+    test('returned payload never leaks the secret (fresh game)', () => {
+        const app = makeApp();
+        const res = engine.createRandomGame(app, 'user1', '2025-06-15', 6, 'all', { w: 'kissat', pos: 'substantiivi' });
+        assert.equal('secret' in res, false);
+        assert.equal('definition_url' in res, false);
+        assert.deepEqual(res.guesses, []);
+        assert.equal(res.mode, 'random');
+        assert.equal(res.length, 6);
+        assert.equal(res.category, 'all');
+        assert.equal(res.finished, false);
+        assert.equal(res.won, false);
+        assert.equal(res.day_changed, false);
+        assert.equal(res.session_id, app.saved[0].get('session_id'), 'payload session matches record');
+    });
+});
+
+describe('createDailyGame', () => {
+    test('persists a daily game and derives length from the target word', () => {
+        const app = makeApp();
+        const res = engine.createDailyGame(app, 'user1', '2025-06-15', { w: 'kissat', pos: 'substantiivi' });
+
+        assert.equal(app.saved.length, 1);
+        const rec = app.saved[0];
+        assert.equal(rec.get('mode'), 'daily');
+        assert.equal(rec.get('category'), 'all');
+        assert.equal(rec.get('length'), 6, 'length comes from the word, not a param');
+        assert.equal(rec.get('secret'), 'kissat');
+        assert.equal(rec.get('date_str'), '2025-06-15');
+
+        // Response hides the secret for the fresh (unfinished) game.
+        assert.equal('secret' in res, false);
+        assert.equal(res.length, 6);
+        assert.equal(res.mode, 'daily');
+    });
+
+    test('guest daily game stores no user relation', () => {
+        const app = makeApp();
+        engine.createDailyGame(app, null, '2025-06-15', { w: 'talo', pos: 'substantiivi' });
+        assert.equal(app.saved[0].get('user'), undefined);
     });
 });

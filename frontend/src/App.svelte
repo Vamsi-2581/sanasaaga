@@ -9,7 +9,8 @@
     loginWithGoogle,
     logout as pbLogout,
     updateUsername as pbUpdateUsername,
-    abandonDaily as pbAbandonDaily
+    abandonDaily as pbAbandonDaily,
+    resetRandom as pbResetRandom
   } from './lib/api.js';
   import { sounds } from './lib/sounds.js';
 
@@ -125,21 +126,49 @@
     } catch (e) {}
   }
 
-  // --- Daily challenge session persistence (guest resume + midnight rollover) ---
-  // While a daily game is in progress, its session_id is tracked here so a
-  // reload (including across the Helsinki midnight rollover) resumes the same
-  // game instead of starting a new one. Cleared when the game ends or is given up.
-  function loadDailySessionId() {
-    try {
-      return localStorage.getItem('sanasaaga_daily_session') || null;
-    } catch (e) {
-      return null;
-    }
+  // --- Per-slot game session persistence (guest resume + continue across switches) ---
+  // Up to six in-progress games coexist: the daily challenge plus one free game
+  // per length (4-8). Each "slot" maps to a session_id tracked here, so changing
+  // length or toggling daily<->free resumes the right game instead of discarding
+  // it. A slot is cleared when its game ends (or a free game is reset/daily given
+  // up). Stored as JSON: { "daily": "<sid>", "random:5": "<sid>", ... }.
+  const SESSIONS_KEY = 'sanasaaga_sessions';
+
+  // The slot key: daily is a single slot; each free length is its own slot.
+  function slotKey(m, len) {
+    return m === 'daily' ? 'daily' : `random:${len}`;
   }
-  function saveDailySessionId(id) {
+
+  function loadSessions() {
     try {
-      if (id) localStorage.setItem('sanasaaga_daily_session', id);
-      else localStorage.removeItem('sanasaaga_daily_session');
+      const raw = localStorage.getItem(SESSIONS_KEY);
+      if (raw) return JSON.parse(raw) || {};
+    } catch (e) {}
+    // One-time migration from the old single-key daily session.
+    try {
+      const legacy = localStorage.getItem('sanasaaga_daily_session');
+      if (legacy) {
+        const migrated = { daily: legacy };
+        localStorage.setItem(SESSIONS_KEY, JSON.stringify(migrated));
+        localStorage.removeItem('sanasaaga_daily_session');
+        return migrated;
+      }
+    } catch (e) {}
+    return {};
+  }
+
+  function getSlotSessionId(m, len) {
+    const sessions = loadSessions();
+    return sessions[slotKey(m, len)] || null;
+  }
+
+  function setSlotSessionId(m, len, id) {
+    try {
+      const sessions = loadSessions();
+      const key = slotKey(m, len);
+      if (id) sessions[key] = id;
+      else delete sessions[key];
+      localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
     } catch (e) {}
   }
 
@@ -167,6 +196,27 @@
     keyStatuses = map;
   }
 
+  // Apply a game payload from the server to the UI state and persist its slot.
+  function applyGameData(gameData) {
+    sessionId = gameData.session_id;
+    // Daily mode picks a random length server-side; always trust the server.
+    length = gameData.length || length;
+    pos = gameData.pos || '';
+    guesses = gameData.guesses || [];
+    currentGuess = '';
+    isGameOver = gameData.finished || false;
+    isWin = gameData.won || false;
+    dayChanged = !!gameData.day_changed;
+    secret = gameData.secret || '';
+    definitionUrl = gameData.definition_url || '';
+    keyStatuses = {};
+    updateKeyStatuses(guesses);
+
+    // Track the slot's session only while its game is in progress; clear it on
+    // game-over so a finished game isn't resumed next time.
+    setSlotSessionId(gameData.mode, gameData.length, isGameOver ? null : sessionId);
+  }
+
   async function initGame() {
     try {
       currentGuess = '';
@@ -177,9 +227,9 @@
       dayChanged = false;
       keyStatuses = {};
 
-      // In daily mode, resume the tracked in-progress session if there is one
-      // (lets guests and authed players continue across reloads and midnight).
-      const resumeId = mode === 'daily' ? loadDailySessionId() : null;
+      // Resume the tracked in-progress session for this slot (daily, or the
+      // free game of the selected length) so switching games never discards one.
+      const resumeId = getSlotSessionId(mode, length);
 
       const gameData = await newGame({
         length,
@@ -188,26 +238,7 @@
         session_id: resumeId
       });
 
-      sessionId = gameData.session_id;
-      // Daily mode picks a random length server-side; always trust the server.
-      length = gameData.length || length;
-      pos = gameData.pos || '';
-      guesses = gameData.guesses || [];
-      isGameOver = gameData.finished || false;
-      isWin = gameData.won || false;
-      dayChanged = !!gameData.day_changed;
-      if (gameData.secret) {
-        secret = gameData.secret;
-        definitionUrl = gameData.definition_url || '';
-      }
-      updateKeyStatuses(guesses);
-
-      // Track the active daily session only while the game is in progress.
-      if (mode === 'daily' && !isGameOver) {
-        saveDailySessionId(sessionId);
-      } else if (mode === 'daily') {
-        saveDailySessionId(null);
-      }
+      applyGameData(gameData);
     } catch (err) {
       addToast(err.message || 'Pelin alustus epäonnistui');
     }
@@ -218,26 +249,26 @@
     isSubmitting = true;
     try {
       const gameData = await pbAbandonDaily({ sessionId });
-
-      sessionId = gameData.session_id;
-      length = gameData.length || length;
-      pos = gameData.pos || '';
-      guesses = gameData.guesses || [];
-      currentGuess = '';
-      isGameOver = false;
-      isWin = false;
-      secret = '';
-      definitionUrl = '';
-      dayChanged = false;
-      keyStatuses = {};
-      updateKeyStatuses(guesses);
-
-      if (mode === 'daily') {
-        saveDailySessionId(isGameOver ? null : sessionId);
-      }
+      applyGameData(gameData);
       addToast('Uusi päivän sana aloitettu');
     } catch (err) {
       addToast(err.message || 'Pelin peruutus epäonnistui');
+    } finally {
+      isSubmitting = false;
+    }
+  }
+
+  // Free play only: discard the current unfinished game of this length and
+  // start a fresh one with a new word.
+  async function resetRandomGame() {
+    if (mode !== 'random' || isSubmitting) return;
+    isSubmitting = true;
+    try {
+      const gameData = await pbResetRandom({ length, category, sessionId });
+      applyGameData(gameData);
+      addToast('Uusi peli aloitettu');
+    } catch (err) {
+      addToast(err.message || 'Pelin nollaus epäonnistui');
     } finally {
       isSubmitting = false;
     }
@@ -316,10 +347,9 @@
         secret = res.secret || '';
         definitionUrl = res.definition_url || '';
 
-        // The daily session is no longer resumable once the game is over.
-        if (mode === 'daily') {
-          saveDailySessionId(null);
-        }
+        // The game is over, so its slot is no longer resumable. Clear it for
+        // both daily and free play (the free slot is keyed by this length).
+        setSlotSessionId(mode, length, null);
 
         setTimeout(() => {
           if (res.is_win) {
@@ -460,6 +490,18 @@
             </button>
           {/each}
         </div>
+        <button
+          class="reset-btn"
+          onclick={resetRandomGame}
+          disabled={isSubmitting}
+          title="Uusi peli (hylkää nykyinen)"
+          aria-label="Uusi peli"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
+        </button>
       </div>
     {/if}
 

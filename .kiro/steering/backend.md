@@ -36,13 +36,18 @@ The backend is a single PocketBase binary with JS hooks executed in the Goja JSV
 - **Free play word** (`pickRandomTarget(length, category)`): random pick from the top 70% most-frequent words of the chosen length/category.
 - **Helsinki date** (`getFinlandDateStr()`): derives the Europe/Helsinki date from the UTC clock with EU DST handling (EET = UTC+2 / EEST = UTC+3), independent of the container's TZ. Used for the daily seed and the rollover comparison.
 - `getDefinitionUrl(word)` returns `https://www.kielitoimistonsanakirja.fi/#/<encoded_word>`.
-- Shared helpers `serializeGame(rec, dayChanged)` and `createDailyGame(app, authId, today, targetObj)` build the API response / persist a daily game record; reuse them instead of duplicating record creation.
+- Shared helpers `serializeGame(rec, dayChanged)`, `createDailyGame(app, authId, today, targetObj)`, and `createRandomGame(app, authId, today, length, category, targetObj)` build the API response / persist a game record; reuse them instead of duplicating record creation.
 
 ## Daily challenge lifecycle (midnight rollover)
 - The daily word is tied to a Helsinki date (`date_str`). The client never sends the date — the server computes it with `getFinlandDateStr()`.
 - `/api/game/new` (daily): if the client sends `session_id`, resume that exact game (guests track it in `localStorage`). Else for authed users, resume today's game, then any unfinished daily game from an earlier date (returned with `day_changed: true`). Otherwise create today's game. Daily mode ignores the client's `length`/`category` — both are random.
 - `/api/game/daily/abandon`: marks an in-progress previous-day daily game as `finished` + `won = false` (a loss), then returns (or creates) today's game. Authed users must own the game; guests act by `session_id`.
-- Free play ignores all of the above (always a fresh random game with the client's length/category).
+
+## Free-play lifecycle (one game per length)
+- Up to six in-progress games coexist per player: the daily plus one free game per length (4–8). Each length is an independent slot.
+- `/api/game/new` (random): resume by `session_id` (must be a `random` game of the SAME `length`, unfinished, accessible), else for authed users resume their most recent unfinished `random` game of that length, else create a new one. Free games persist until finished — switching length or toggling daily↔free never discards them.
+- `/api/game/random/reset`: discard the caller's current unfinished free game of a given `length` (hard `delete`, NOT recorded as a loss — free play is unlimited so resets must not touch stats) and start a fresh one. Ownership-checked.
+- The client tracks each slot's `session_id` in a `localStorage` map and sends the relevant one; authed users also resume server-side by `user+mode+length` (works across devices).
 
 ## Schema (`init.pb.js` -> `schema.js`)
 - There are no migrations (the container ships only `pb_hooks`), so schema setup runs on every boot and must converge both a fresh and an existing `pb_data`: create collections if missing, add any missing field/rule, never assume an empty database. A second boot must be a no-op.

@@ -55,6 +55,25 @@ export async function abandonDaily({ sessionId }) {
   return await res.json();
 }
 
+// Reset a free-play game: discard the current unfinished game of this length
+// and start a fresh one. The discarded game is deleted server-side (not a loss)
+// and never affects stats.
+export async function resetRandom({ length = 5, category = 'all', sessionId = null } = {}) {
+  const res = await fetch('/api/game/random/reset', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(pb.authStore.token ? { Authorization: `Bearer ${pb.authStore.token}` } : {})
+    },
+    body: JSON.stringify({ length, category, session_id: sessionId })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Pelin nollaus epäonnistui');
+  }
+  return await res.json();
+}
+
 export async function submitGuess({ sessionId, guess }) {
   const res = await fetch('/api/game/guess', {
     method: 'POST',

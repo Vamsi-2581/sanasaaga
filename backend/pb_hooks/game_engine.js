@@ -181,6 +181,43 @@ function createDailyGame(app, authId, today, targetObj) {
     };
 }
 
+function createRandomGame(app, authId, today, length, category, targetObj) {
+    var gamesCol = app.findCollectionByNameOrId("games");
+    var rec = new Record(gamesCol);
+    var sessionId = $security.randomString(24);
+
+    rec.set("session_id", sessionId);
+    if (authId) {
+        rec.set("user", authId);
+    }
+    rec.set("mode", "random");
+    rec.set("date_str", today);
+    rec.set("length", length);
+    rec.set("category", category);
+    rec.set("secret", targetObj.w);
+    rec.set("pos", targetObj.pos);
+    rec.set("guesses_json", "[]");
+    rec.set("attempts", 0);
+    rec.set("max_attempts", 6);
+    rec.set("won", false);
+    rec.set("finished", false);
+    app.save(rec);
+
+    return {
+        session_id: sessionId,
+        length: length,
+        category: category,
+        mode: "random",
+        date_str: today,
+        max_attempts: 6,
+        pos: targetObj.pos,
+        guesses: [],
+        finished: false,
+        won: false,
+        day_changed: false
+    };
+}
+
 // ---------------------------------------------------------------------------
 // Core game logic
 // ---------------------------------------------------------------------------
@@ -254,5 +291,6 @@ module.exports = {
     getDefinitionUrl: getDefinitionUrl,
     getFinlandDateStr: getFinlandDateStr,
     serializeGame: serializeGame,
-    createDailyGame: createDailyGame
+    createDailyGame: createDailyGame,
+    createRandomGame: createRandomGame
 };

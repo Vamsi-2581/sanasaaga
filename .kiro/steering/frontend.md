@@ -26,7 +26,8 @@ Svelte 5 SPA bundled with Vite. Uses Runes exclusively — no Svelte 4 reactivit
 ## State & persistence (`App.svelte`)
 - `App.svelte` is the single orchestrator: holds game state, settings, stats, and modal open-flags, then passes props down to components. Keep components presentational; put logic in `App.svelte` and `lib/*.js`.
 - Settings persist to `localStorage` under `sanasaaga_settings`; guest stats under `sanasaaga_stats` (daily games only, matching the server aggregate). Wrap all `localStorage` access in try/catch.
-- An in-progress daily `session_id` is stored under `sanasaaga_daily_session` so reloads (and the Helsinki midnight rollover) resume the same game; it is cleared on game-over or give-up. The daily length is random and comes from the server — always set `length` from the `newGame`/`abandonDaily` response, never from the client pills (which are hidden in daily mode).
+- In-progress game sessions are tracked in a `localStorage` map under `sanasaaga_sessions` (JSON `{ "daily": sid, "random:5": sid, ... }`), one slot per playable game: the daily plus one free game per length (4–8). `initGame` sends the current slot's `session_id` so switching length or toggling daily↔free resumes the right game instead of discarding it; a slot is cleared on game-over, daily give-up, or free-play reset. Migrated once from the old single `sanasaaga_daily_session` key. Always set `length` from the `newGame`/`abandonDaily`/`resetRandom` response (daily length is random and server-chosen), never from the client pills.
+- Free play has a reset button (`.reset-btn`) that calls `resetRandom({ length, category, sessionId })` to discard the current unfinished game of that length and start a new one.
 - Keyboard input is handled by a global `keydown` listener (added in `onMount`, removed in `onDestroy`); ignore input while a modal is open or when Ctrl/Meta/Alt modifiers are held.
 - Only `a-zåäö` letters are accepted — the Finnish alphabet includes Å, Ä, Ö.
 

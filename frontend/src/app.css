@@ -277,6 +277,33 @@ body {
   color: var(--accent-color);
 }
 
+/* Free-play reset: discard the current unfinished game and start a new one. */
+.reset-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 50%;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.reset-btn:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.reset-btn:active {
+  transform: rotate(-90deg);
+}
+
+.reset-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* Day-changed banner (midnight rollover: give up yesterday's daily game) */
 .day-changed-banner {
   display: flex;

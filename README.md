@@ -15,7 +15,7 @@ The entire stack consumes less than **85 MB of memory**, making it ideal for low
 - **Parts of Speech** (Free Play): Filter target words by part of speech (**All**, **Nouns**, **Adjectives**, or **Verbs**). The daily challenge draws from all classes.
 - **Daily Challenge & Free Play**:
   - **Daily Word**: One word per day, identical for every player. The word length (4–8) and word class (noun, adjective or verb) are both random, drawn from the whole dictionary. A server-side secret (`DAILY_WORD_SECRET` env var) is mixed into the SHA-256 seed so the word cannot be reconstructed even with the dictionary. The word changes at midnight **Helsinki time** (with DST); an in-progress game can be finished past midnight, or given up to start the new day's word.
-  - **Free Play**: Play unlimited rounds with random words; choose any word length (4–8) and optionally filter by part of speech.
+  - **Free Play**: Play unlimited rounds with random words; choose any word length (4–8) and optionally filter by part of speech. Each length is a separate game that persists until finished — switch between lengths (or over to the daily and back) without losing progress, and keep up to five free games going at once. A reset button discards the current unfinished game of a length and deals a new word.
 - **High-Quality Vocabulary**:
   - Over **25,000 valid Finnish words**.
   - Sourced from the Institute for the Languages of Finland ([Kotus](https://kaino.kotus.fi/sanat/nykysuomi/)) Contemporary Finnish Wordlist and Voikko's [Joukahainen](https://joukahainen.puimula.org/) morphology database.

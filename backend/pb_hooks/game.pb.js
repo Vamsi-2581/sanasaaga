@@ -80,47 +80,97 @@ routerAdd("POST", "/api/game/new", (e) => {
     }
 
     // ---- Free play (random) ----
+    // Free games persist until finished. Each length (4-8) is an independent
+    // slot, so switching length or toggling daily<->free resumes the existing
+    // in-progress game for that length instead of discarding it.
     const length = Number(body.length) || 5;
     if (length < 4 || length > 8) {
         return e.json(400, { error: "Sanan pituuden on oltava 4-8 kirjainta." });
     }
     const category = body.category || "all";
 
-    const targetObj = engine.pickRandomTarget(length, category);
-    const sessionId = $security.randomString(24);
-
-    const gamesCol = e.app.findCollectionByNameOrId("games");
-    const rec = new Record(gamesCol);
-    rec.set("session_id", sessionId);
-    if (e.auth) {
-        rec.set("user", e.auth.id);
+    // 1) Explicit resume by session_id (tracked per-slot in the client's
+    //    localStorage). Must be a random game of the SAME length, unfinished,
+    //    and accessible by this caller.
+    if (body.session_id) {
+        try {
+            const rec = e.app.findFirstRecordByFilter(
+                "games",
+                "session_id = {:sid} && mode = 'random'",
+                { sid: body.session_id }
+            );
+            if (!rec.get("finished")
+                && rec.get("length") === length
+                && engine.canAccessGame(rec.get("user"), e.auth ? e.auth.id : null)) {
+                return e.json(200, engine.serializeGame(rec, false));
+            }
+        } catch (err) {
+            // not found / invalid -> fall through
+        }
     }
-    rec.set("mode", "random");
-    rec.set("date_str", today);
-    rec.set("length", length);
-    rec.set("category", category);
-    rec.set("secret", targetObj.w);
-    rec.set("pos", targetObj.pos);
-    rec.set("guesses_json", "[]");
-    rec.set("attempts", 0);
-    rec.set("max_attempts", 6);
-    rec.set("won", false);
-    rec.set("finished", false);
-    e.app.save(rec);
 
-    return e.json(200, {
-        session_id: sessionId,
-        length: length,
-        category: category,
-        mode: "random",
-        date_str: today,
-        max_attempts: 6,
-        pos: targetObj.pos,
-        guesses: [],
-        finished: false,
-        won: false,
-        day_changed: false
-    });
+    // 2) Authed users: resume their most recent unfinished random game of this
+    //    length (lets them continue on a new device/browser without the map).
+    if (e.auth) {
+        try {
+            const prev = e.app.findRecordsByFilter(
+                "games",
+                "user = {:uid} && mode = 'random' && length = {:len} && finished = false",
+                "-created",
+                1,
+                0,
+                { uid: e.auth.id, len: length }
+            );
+            if (prev.length > 0) {
+                return e.json(200, engine.serializeGame(prev[0], false));
+            }
+        } catch (err) {
+            // ignore lookup errors
+        }
+    }
+
+    // 3) Otherwise create a new free game for this length.
+    const targetObj = engine.pickRandomTarget(length, category);
+    return e.json(200, engine.createRandomGame(e.app, e.auth ? e.auth.id : null, today, length, category, targetObj));
+});
+
+// Reset a free-play game: discard the current unfinished game of a given length
+// and start a fresh one. Free play is casual and unlimited, so a discarded game
+// is deleted (not recorded as a loss) and never affects stats. Daily games
+// cannot be reset here - they use /api/game/daily/abandon.
+routerAdd("POST", "/api/game/random/reset", (e) => {
+    const engine = require(`${__hooks}/game_engine.js`);
+    const body = e.requestInfo().body || {};
+    const today = engine.getFinlandDateStr();
+
+    const length = Number(body.length) || 5;
+    if (length < 4 || length > 8) {
+        return e.json(400, { error: "Sanan pituuden on oltava 4-8 kirjainta." });
+    }
+    const category = body.category || "all";
+    const sessionId = (body.session_id || "").trim();
+
+    // Delete the caller's current unfinished game for this slot, if provided.
+    if (sessionId) {
+        try {
+            const rec = e.app.findFirstRecordByFilter(
+                "games",
+                "session_id = {:sid} && mode = 'random'",
+                { sid: sessionId }
+            );
+            if (!engine.canAccessGame(rec.get("user"), e.auth ? e.auth.id : null)) {
+                return e.json(403, { error: "Ei oikeutta tähän peliin." });
+            }
+            if (!rec.get("finished")) {
+                e.app.delete(rec);
+            }
+        } catch (err) {
+            // nothing to discard
+        }
+    }
+
+    const targetObj = engine.pickRandomTarget(length, category);
+    return e.json(200, engine.createRandomGame(e.app, e.auth ? e.auth.id : null, today, length, category, targetObj));
 });
 
 // Give up the in-progress daily game from a previous day and start today's.

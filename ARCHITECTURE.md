@@ -83,7 +83,7 @@ A single-binary **PocketBase** application (Go + Goja JSVM runtime hooks):
 * **Wordle Game Logic ([`pb_hooks/game_engine.js`](backend/pb_hooks/game_engine.js))**:
   * Official two-pass letter coloring algorithm (`correct`, `present`, `absent`).
   * Daily word selection: one word per Helsinki day, identical for everyone. Both the length (4–8) and the word class are random, drawn across the whole dictionary. Seed = `DAILY_WORD_SECRET` (env var) + `:` + Helsinki date → `SHA-256`; the first 8 hex chars select the length, the next 8 hex chars index into the top-600 most-frequent words of that length. The secret is read via `$os.getenv` and never leaves the server, so the daily word can't be reconstructed from the dictionary alone.
-  * Free play: random pick from the top 70% most-frequent words of the chosen length/category.
+  * Free play: random pick from the top 70% most-frequent words of the chosen length/category. Each word length (4–8) is an independent game slot that persists until finished, so a player can keep up to five free games going (one per length) plus the daily, switching between them without losing progress. A reset action discards the current unfinished free game of a length and starts a new one.
   * Helsinki date is derived from the UTC clock with EU DST handling (EET=UTC+2 / EEST=UTC+3), so the daily rollover is correct regardless of the container's timezone.
 
 ---
@@ -93,8 +93,9 @@ A single-binary **PocketBase** application (Go + Goja JSVM runtime hooks):
 | Method | Route | Description | Auth Required |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/health` | Server health check | Public |
-| `POST` | `/api/game/new` | Start or resume a game. Daily mode ignores client length/category (both random) and resumes in-progress daily games across the Helsinki midnight rollover (returns `day_changed`). | Optional (resumes daily game if authenticated) |
+| `POST` | `/api/game/new` | Start or resume a game. Daily mode ignores client length/category (both random) and resumes in-progress daily games across the Helsinki midnight rollover (returns `day_changed`). Free play resumes the in-progress game for the requested length — one independent slot per length (4–8), persisting until finished. | Optional (resumes by user if authenticated) |
 | `POST` | `/api/game/daily/abandon` | Give up an in-progress daily game from a previous day (recorded as a loss) and start today's. | Optional |
+| `POST` | `/api/game/random/reset` | Discard the current unfinished free game of a given length (deleted, not counted as a loss) and start a fresh one. | Optional |
 | `POST` | `/api/game/guess` | Evaluates guess and returns tile statuses. Reveals secret upon game over. | Optional |
 | `GET` | `/api/words/check?word=` | Validates whether a word exists in the Finnish dictionary | Public |
 | `GET` | `/api/game/stats` | Fetches aggregated player statistics and streaks | Yes (Bearer Token) |

@@ -17,8 +17,9 @@ Browser/PWA → reverse proxy (Caddy or Nginx, HTTPS :443) → frontend containe
 | Method | Route | Auth | Purpose |
 |---|---|---|---|
 | GET | `/health` | public | health check |
-| POST | `/api/game/new` | optional | start/resume a game; daily ignores client length/category (both random) and resumes in-progress daily games across the Helsinki midnight rollover (returns `day_changed`) |
+| POST | `/api/game/new` | optional | start/resume a game. Daily ignores client length/category (both random) and resumes across the Helsinki midnight rollover (returns `day_changed`). Free play resumes the in-progress game for the requested length (one slot per length 4–8) |
 | POST | `/api/game/daily/abandon` | optional | give up an in-progress previous-day daily game (recorded as a loss) and start today's |
+| POST | `/api/game/random/reset` | optional | discard the current unfinished free game of a length (deleted, not a loss) and start a fresh one |
 | POST | `/api/game/guess` | optional | evaluate a guess; reveals `secret` + `definition_url` on game-over |
 | GET | `/api/words/check?word=` | public | dictionary validity check |
 | GET | `/api/game/stats` | bearer | aggregated player stats & streaks |
