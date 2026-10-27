@@ -100,6 +100,15 @@ body {
   height: 100vh;
   height: 100dvh;
   padding: 0 8px;
+  /* Safe-area insets keep content clear of notches, rounded corners, and the
+     home indicator on devices like modern iPhones. Requires viewport-fit=cover
+     (set in index.html); env() is 0 on devices/browsers without safe areas, so
+     max() preserves the base padding everywhere else.
+     The keyboard sits at the bottom, so the bottom inset matters most. */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: max(8px, env(safe-area-inset-left, 0px));
+  padding-right: max(8px, env(safe-area-inset-right, 0px));
 }
 
 /* Header */
@@ -119,6 +128,12 @@ body {
   gap: 6px;
 }
 
+/* Side groups must not shrink, so the action icons (incl. settings) always
+   stay on screen; only the center logo gives up space when the row is tight. */
+.header-side {
+  flex-shrink: 0;
+}
+
 .header-side.right {
   justify-content: flex-end;
 }
@@ -131,10 +146,28 @@ body {
   align-items: center;
   gap: 6px;
   color: var(--text-color);
+  /* Allow the logo to shrink and ellipsize rather than push icons off-screen. */
+  min-width: 0;
+  overflow: hidden;
 }
 
+/* When the header row is tight, the leaf emoji is sacrificed first: its high
+   shrink factor collapses it (and the flex gap) to nothing before the brand
+   text gives up any width. The text only begins to ellipsize once the leaf is
+   fully gone and space is still insufficient. */
 .logo-leaf {
   font-size: 1.25rem;
+  flex: 0 1000 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.logo span:not(.logo-leaf) {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .icon-btn {
@@ -147,6 +180,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   transition: background-color 0.15s ease, transform 0.1s;
 }
 
@@ -166,6 +200,15 @@ body {
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
+  max-width: 40vw;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Keep the icon/emoji whole; only the username label truncates. */
+.user-tag-btn span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .user-tag-btn:hover {
@@ -273,6 +316,10 @@ body {
   gap: 5px;
   height: 100%;
   max-height: 380px;
+  /* aspect-ratio (length / 6) is set inline per word length in Board.svelte.
+     Constrain by BOTH height and width so wide boards (7-8 letters) shrink to
+     fit narrow screens instead of overflowing and clipping the edge columns. */
+  max-width: 100%;
   aspect-ratio: 5 / 6;
   width: auto;
 }
@@ -290,7 +337,7 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(1.1rem, 4vw, 1.8rem);
+  font-size: clamp(0.85rem, 3.2vw, 1.8rem);
   font-weight: 800;
   text-transform: uppercase;
   color: var(--text-color);
@@ -524,4 +571,64 @@ body {
   box-shadow: var(--shadow-sm);
   font-size: 0.9rem;
   animation: popIn 0.15s ease-out;
+}
+
+/* ---------------------------------------------------------------------------
+   Mobile / narrow screens
+   Most players are on phones. Tighten horizontal padding, shrink the logo so
+   the header action icons (help/stats/settings) always fit, reduce the board
+   gap, and trim the keyboard height to give the board more vertical room.
+   --------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+  .app-container {
+    /* Keep the safe-area insets from the base rule; only tighten the base
+       horizontal padding (max() still wins when an inset is larger). */
+    padding-left: max(4px, env(safe-area-inset-left, 0px));
+    padding-right: max(4px, env(safe-area-inset-right, 0px));
+  }
+
+  .game-header {
+    padding: 0 2px;
+  }
+
+  .logo {
+    font-size: 1.1rem;
+    letter-spacing: 0.06em;
+    gap: 4px;
+  }
+
+  .logo-leaf {
+    font-size: 1.05rem;
+  }
+
+  .user-tag-btn {
+    max-width: 32vw;
+    padding: 4px 6px;
+  }
+
+  .board-grid {
+    gap: 4px;
+  }
+
+  .board-row {
+    gap: 4px;
+  }
+
+  .keyboard-container {
+    height: 180px;
+  }
+}
+
+/* Very narrow phones: shave the board gap further so 7-8 letter tiles keep a
+   usable size and never clip at the screen edges. */
+@media (max-width: 360px) {
+  .board-grid,
+  .board-row {
+    gap: 3px;
+  }
+
+  .logo {
+    font-size: 1rem;
+    letter-spacing: 0.04em;
+  }
 }
