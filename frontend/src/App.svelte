@@ -406,9 +406,13 @@
             fetchServerStats();
           }
 
-          setTimeout(() => {
-            isStatsOpen = true;
-          }, 1200);
+          // Only the daily challenge gets the end-game summary popup: free play
+          // doesn't count toward streaks/distribution and isn't shareable.
+          if (mode === 'daily') {
+            setTimeout(() => {
+              isStatsOpen = true;
+            }, 1200);
+          }
         }, length * 150 + 200);
       }
     } catch (err) {

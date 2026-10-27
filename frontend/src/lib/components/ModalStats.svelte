@@ -22,6 +22,33 @@
   const maxDist = $derived(
     Math.max(1, ...Object.values(stats.distribution || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }))
   );
+
+  // The end-game summary (congrats message + share) is daily-only. Free play
+  // doesn't count toward streaks/distribution and isn't shareable, so when it's
+  // opened manually from the header we show just the stats.
+  const showSummary = $derived(isGameOver && mode === 'daily');
+
+  // Number of guesses it took to win (only meaningful on a win).
+  const winAttempts = $derived(isWin ? guesses.length : 0);
+
+  // Finnish instrumental plural ("yhdellä arvauksella", "kahdella arvauksella", ...)
+  const attemptWords = {
+    1: 'YHDELLÄ',
+    2: 'kahdella',
+    3: 'kolmella',
+    4: 'neljällä',
+    5: 'viidellä',
+    6: 'kuudella'
+  };
+
+  const winMessage = $derived(
+    attemptWords[winAttempts]
+      ? `🎉 Onneksi olkoon, arvasit sanan ${attemptWords[winAttempts]} arvauksella!`
+      : '🎉 Onneksi olkoon, voitit!'
+  );
+
+  // Highlight the distribution bar matching this round's winning guess count.
+  const highlightAtt = $derived(showSummary && isWin ? winAttempts : 0);
 </script>
 
 {#if isOpen}
@@ -38,10 +65,10 @@
       </div>
 
       <div class="modal-body">
-        {#if isGameOver}
+        {#if showSummary}
           <div style="text-align: center; padding: 6px 0;">
             <h3 style="font-size: 1.3rem; margin-bottom: 4px;">
-              {isWin ? '🎉 Onneksi olkoon, voitit!' : 'Peli päättyi!'}
+              {isWin ? winMessage : 'Peli päättyi!'}
             </h3>
             <p style="color: var(--text-muted);">
               Oikea sana oli: <strong style="color: var(--accent-color); text-transform: uppercase;">{secret}</strong>
@@ -88,12 +115,13 @@
           {#each [1, 2, 3, 4, 5, 6] as att}
             {@const count = stats.distribution ? (stats.distribution[att] || 0) : 0}
             {@const percent = Math.round((count / maxDist) * 100)}
+            {@const isCurrent = att === highlightAtt}
             <div style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem;">
-              <span style="width: 14px; font-weight: 700;">{att}</span>
+              <span style="width: 14px; font-weight: 700; color: {isCurrent ? 'var(--accent-color)' : 'inherit'};">{att}</span>
               <div
                 style="
-                  background-color: {count > 0 ? 'var(--accent-color)' : 'var(--bg-tertiary)'};
-                  color: {count > 0 ? '#000000' : 'var(--text-muted)'};
+                  background-color: {count > 0 || isCurrent ? 'var(--accent-color)' : 'var(--bg-tertiary)'};
+                  color: {count > 0 || isCurrent ? '#000000' : 'var(--text-muted)'};
                   font-weight: 700;
                   padding: 2px 8px;
                   border-radius: 4px;
@@ -101,6 +129,7 @@
                   width: {Math.max(8, percent)}%;
                   text-align: right;
                   transition: width 0.3s ease;
+                  box-shadow: {isCurrent ? '0 0 0 2px var(--bg-secondary), 0 0 0 4px var(--accent-hover)' : 'none'};
                 "
               >
                 {count}
@@ -109,7 +138,7 @@
           {/each}
         </div>
 
-        {#if isGameOver}
+        {#if showSummary}
           <div style="margin-top: 14px; display: flex; justify-content: center;">
             <button class="btn-primary" onclick={onShare} style="width: 100%;">
               <span>📋</span>
